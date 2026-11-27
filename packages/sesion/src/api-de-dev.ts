@@ -2,14 +2,14 @@
  * Rutas `/api/*` y `/componentes.js` de `dev` sobre un Workspace vivo, sin transporte: entra una peticion (metodo, URL y
  * cuerpo crudo) y sale siempre una respuesta completa (estado HTTP, cuerpo ya serializado y cabeceras). La usan el servidor real (`cli`)
  * y `devEnMemoria` (`estudio/contrato`), asi que el ruteo, la validacion y los bordes son unos solos (ADR 0007).
- * Bordes: ruta desconocida 404; metodo ajeno 405 con `allow`; JSON o forma invalida 400; rechazos `estadoHttpDeRechazo`
+ * Bordes: ruta desconocida 404; metodo ajeno 405 con `allow`; JSON o forma invalida 400; rechazos `rejectionHttpStatus`
  * (409/422); el bundle de Componentes sin confianza 403; una excepcion (fallo de I/O del puerto) 500 con su message.
  * Todos con `{ ok: false, message }`. El bundle es lo unico que no es JSON (`text/javascript`).
  * Invariantes: nunca rechaza. Al adaptador le quedan solo el transporte y su seguridad (Host, Origin, content-type) y
  * lo demas (estaticos, `/eventos`, fuentes).
  */
-import { archivoDeRuta, COMANDOS_DE_INSPECT, estadoHttpDeRechazo, intencionSchema, peticionDeEdicionesSchema, peticionDeSaltoSchema, RUTAS_DE_DEV } from 'canonico';
-import type { ComandoDeInspect, Intencion } from 'canonico';
+import { fileFromRoute, INSPECT_COMMANDS, rejectionHttpStatus, intentSchema, editsRequestSchema, jumpRequestSchema, DEV_ROUTES } from 'canonical';
+import type { InspectCommand, Intent } from 'canonical';
 
 import type { Consulta } from './consultas';
 import type { EdicionesDeTexto, ResultadoDelWorkspaceVivo, WorkspaceVivo } from './workspace-vivo';
@@ -40,17 +40,17 @@ const json = (status: number, cuerpo: unknown): Respuesta => ({ status, cuerpo }
 const error = (status: number, message: string): Respuesta => json(status, { ok: false, message });
 
 const resultado = (r: ResultadoDelWorkspaceVivo): Respuesta =>
-  r.ok ? json(200, r) : json(estadoHttpDeRechazo(r.reason), { ok: false, reason: r.reason, message: r.message, ...(r.file !== undefined && { file: r.file }) });
+  r.ok ? json(200, r) : json(rejectionHttpStatus(r.reason), { ok: false, reason: r.reason, message: r.message, ...(r.file !== undefined && { file: r.file }) });
 
-/** Una Intencion o `{ ediciones, version?, descripcion?, aunqueNoCompile? }` (`PeticionDeEdiciones`); `undefined` es 400. */
-export function pedidoDeEdicion(cuerpo: unknown): { aplicable: Intencion | EdicionesDeTexto; version?: number } | undefined {
+/** Una Intencion o `{ ediciones, version?, descripcion?, aunqueNoCompile? }` (`EditsRequest`); `undefined` es 400. */
+export function pedidoDeEdicion(cuerpo: unknown): { aplicable: Intent | EdicionesDeTexto; version?: number } | undefined {
   if (typeof cuerpo === 'object' && cuerpo !== null && 'ediciones' in cuerpo) {
-    const r = peticionDeEdicionesSchema.safeParse(cuerpo);
+    const r = editsRequestSchema.safeParse(cuerpo);
     if (!r.success) return undefined;
     const { ediciones, version, descripcion, aunqueNoCompile } = r.data;
     return { aplicable: { ediciones, ...(descripcion !== undefined && { descripcion }), ...(aunqueNoCompile === true && { aunqueNoCompile }) }, ...(version !== undefined && { version }) };
   }
-  const r = intencionSchema.safeParse(cuerpo);
+  const r = intentSchema.safeParse(cuerpo);
   if (!r.success) return undefined;
   const version = (cuerpo as { version?: unknown }).version;
   return { aplicable: r.data, ...(typeof version === 'number' && Number.isInteger(version) && version >= 0 && { version }) };
@@ -58,18 +58,18 @@ export function pedidoDeEdicion(cuerpo: unknown): { aplicable: Intencion | Edici
 
 /** `/api/inspect/<comando>/<argumento>[?kind&state&diagram&catalog]` como Consulta; `undefined` si no encaja. */
 export function consultaDeRuta(url: URL): Consulta | undefined {
-  const [comando, codificado, ...sobra] = url.pathname.slice(RUTAS_DE_DEV.inspect.length).split('/');
+  const [comando, codificado, ...sobra] = url.pathname.slice(DEV_ROUTES.inspect.length).split('/');
   let argumento: string | undefined;
   try {
     argumento = codificado === undefined ? undefined : decodeURIComponent(codificado);
   } catch {
     argumento = undefined;
   }
-  if (comando === undefined || !(COMANDOS_DE_INSPECT as readonly string[]).includes(comando) || sobra.length > 0) return undefined;
+  if (comando === undefined || !(INSPECT_COMMANDS as readonly string[]).includes(comando) || sobra.length > 0) return undefined;
   // `planned` no recibe argumento (`/api/inspect/planned/`); el resto lo exige.
   if (comando === 'planned') return argumento === undefined || argumento === '' ? { comando } : undefined;
   if (argumento === undefined || argumento === '') return undefined;
-  if (comando !== 'theme') return { comando: comando as Exclude<ComandoDeInspect, 'theme' | 'planned'>, argumento };
+  if (comando !== 'theme') return { comando: comando as Exclude<InspectCommand, 'theme' | 'planned'>, argumento };
   const opcion = (parametro: 'kind' | 'state' | 'diagram', clave: 'tipo' | 'estado' | 'diagrama'): { [k: string]: string } => {
     const valor = url.searchParams.get(parametro);
     return valor === null ? {} : { [clave]: valor };
@@ -88,46 +88,46 @@ interface Ruta {
 const RUTAS: readonly Ruta[] = [
   {
     metodo: 'POST',
-    ruta: RUTAS_DE_DEV.edit,
+    ruta: DEV_ROUTES.edit,
     async atender(vivo, _url, cuerpo) {
       const pedido = pedidoDeEdicion(cuerpo);
       if (pedido === undefined) return error(400, 'Expected an Intent { type, ... } or { ediciones, version, descripcion? }');
       return resultado(await vivo.editar(pedido.aplicable, pedido.version));
     },
   },
-  { metodo: 'POST', ruta: RUTAS_DE_DEV.deshacer, atender: async (vivo) => resultado(await vivo.deshacer()) },
-  { metodo: 'POST', ruta: RUTAS_DE_DEV.rehacer, atender: async (vivo) => resultado(await vivo.rehacer()) },
+  { metodo: 'POST', ruta: DEV_ROUTES.undo, atender: async (vivo) => resultado(await vivo.deshacer()) },
+  { metodo: 'POST', ruta: DEV_ROUTES.redo, atender: async (vivo) => resultado(await vivo.rehacer()) },
   {
     metodo: 'POST',
-    ruta: RUTAS_DE_DEV.saltar,
+    ruta: DEV_ROUTES.jump,
     async atender(vivo, _url, cuerpo) {
-      const salto = peticionDeSaltoSchema.safeParse(cuerpo);
+      const salto = jumpRequestSchema.safeParse(cuerpo);
       if (!salto.success) return error(400, 'Expected { id } with a non-negative integer');
       return resultado(await vivo.saltar(salto.data.id));
     },
   },
   {
     metodo: 'POST',
-    ruta: RUTAS_DE_DEV.confiar,
+    ruta: DEV_ROUTES.trust,
     atender(vivo) {
       vivo.confiar();
       return json(200, { ok: true });
     },
   },
-  { metodo: 'GET', ruta: RUTAS_DE_DEV.estado, atender: (vivo) => json(200, vivo.estado()) },
-  { metodo: 'GET', ruta: RUTAS_DE_DEV.archivos, atender: (vivo) => json(200, vivo.archivos()) },
+  { metodo: 'GET', ruta: DEV_ROUTES.state, atender: (vivo) => json(200, vivo.estado()) },
+  { metodo: 'GET', ruta: DEV_ROUTES.files, atender: (vivo) => json(200, vivo.archivos()) },
   {
     metodo: 'GET',
-    ruta: RUTAS_DE_DEV.archivo,
+    ruta: DEV_ROUTES.file,
     atender(vivo, url) {
-      const file = archivoDeRuta(url.pathname.slice(RUTAS_DE_DEV.archivo.length));
+      const file = fileFromRoute(url.pathname.slice(DEV_ROUTES.file.length));
       const leido = file === undefined ? undefined : vivo.archivo(file);
       return leido === undefined ? error(404, 'File not found') : json(200, leido);
     },
   },
   {
     metodo: 'GET',
-    ruta: RUTAS_DE_DEV.codigo,
+    ruta: DEV_ROUTES.code,
     atender(vivo) {
       const { componentes, confiado } = vivo.codigo();
       return json(200, { temaConCodigo: componentes.length > 0, componentes, confiado });
@@ -135,7 +135,7 @@ const RUTAS: readonly Ruta[] = [
   },
   {
     metodo: 'GET',
-    ruta: RUTAS_DE_DEV.componentes,
+    ruta: DEV_ROUTES.components,
     atender(vivo) {
       const { confiado, bundle } = vivo.codigo();
       return confiado ? { status: 200, javascript: bundle } : error(403, 'The Workspace code is not confirmed');
@@ -143,10 +143,10 @@ const RUTAS: readonly Ruta[] = [
   },
   {
     metodo: 'GET',
-    ruta: RUTAS_DE_DEV.inspect,
+    ruta: DEV_ROUTES.inspect,
     atender(vivo, url) {
       const consulta = consultaDeRuta(url);
-      if (consulta === undefined) return json(404, { ok: false, message: `Unknown inspect route; expected ${RUTAS_DE_DEV.inspect}<${COMANDOS_DE_INSPECT.join('|')}>/<argumento>`, suggestions: [] });
+      if (consulta === undefined) return json(404, { ok: false, message: `Unknown inspect route; expected ${DEV_ROUTES.inspect}<${INSPECT_COMMANDS.join('|')}>/<argumento>`, suggestions: [] });
       const r = vivo.consultar(consulta);
       if (r === undefined) return json(422, { ok: false, message: 'The Workspace has errors and never compiled; there is nothing to query', suggestions: [] });
       return 'noEncontrado' in r ? json(404, { ok: false, message: r.noEncontrado, suggestions: r.suggestions }) : json(200, r.salida);
@@ -154,11 +154,11 @@ const RUTAS: readonly Ruta[] = [
   },
   {
     metodo: 'GET',
-    ruta: RUTAS_DE_DEV.vista,
+    ruta: DEV_ROUTES.view,
     async atender(vivo, url) {
       let id: string;
       try {
-        id = decodeURIComponent(url.pathname.slice(RUTAS_DE_DEV.vista.length));
+        id = decodeURIComponent(url.pathname.slice(DEV_ROUTES.view.length));
       } catch {
         return error(404, 'View not found');
       }

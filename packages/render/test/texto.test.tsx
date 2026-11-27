@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView } from 'canonico';
+import { canonicalFormSchema, resolveView } from 'canonical';
 import { layoutView } from 'layout';
 import { Diagram } from 'render';
 import { TEMA_NEUTRO } from 'tema';
@@ -10,7 +10,7 @@ import type { TemaResuelto } from 'tema';
 import { capaDe, etiquetaCon, hojaDe } from './ayudas';
 
 const vista = resolveView(
-  fuenteCanonicaSchema.parse({
+  canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio', color: 'blue', icon: 'box' }] },
     model: {
       nodes: [

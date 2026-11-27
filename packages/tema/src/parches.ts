@@ -2,7 +2,7 @@
  * Parches por nombre de Capa (nunca por indice) y cascada: Tema base, Tipo de diagrama (`temaParaDiagrama`, antes de
  * la cascada), Tipo de nodo, estado y override de la Vista; el ultimo gana.
  */
-import { CODIGOS, TIPOS_DE_VISTA, candidatosCercanos } from 'canonico';
+import { CODES, VIEW_TYPES, nearestCandidates } from 'canonical';
 
 import { CATALOGO, construirPrimitiva, errorDeValorAntiguo, sugerir } from './catalogo';
 import type { DefinicionDePrimitiva, ErrorDeCatalogo, Primitiva, UbicacionDePrimitiva } from './catalogo';
@@ -16,8 +16,8 @@ import type { Animacion } from './animacion';
 export const ESTADOS = ['planned', 'hover', 'selected', 'ghost', 'on-path', 'dimmed', 'focus'] as const;
 export type Estado = (typeof ESTADOS)[number];
 /** Los que un Tema distingue con `diagram <tipo> { ... }`. */
-export const TIPOS_DE_DIAGRAMA = TIPOS_DE_VISTA;
-export type TipoDeDiagrama = (typeof TIPOS_DE_VISTA)[number];
+export const TIPOS_DE_DIAGRAMA = VIEW_TYPES;
+export type TipoDeDiagrama = (typeof VIEW_TYPES)[number];
 
 /** Va bajo el contenido salvo `encima`. */
 export interface CapaDeTema {
@@ -76,7 +76,7 @@ export function aplicarOps(
 
     if (op.quitar === true) {
       if (actual < 0) {
-        falla(capaAntigua(op.nombre) ?? { codigo: CODIGOS.E_THEME_UNKNOWN_LAYER, mensaje: `Cannot remove Layer '${op.nombre}': it does not exist`, ...sugerir(op.nombre, nombres()) }, 'nombre');
+        falla(capaAntigua(op.nombre) ?? { codigo: CODES.E_THEME_UNKNOWN_LAYER, mensaje: `Cannot remove Layer '${op.nombre}': it does not exist`, ...sugerir(op.nombre, nombres()) }, 'nombre');
       } else capas.splice(actual, 1);
       return;
     }
@@ -86,7 +86,7 @@ export function aplicarOps(
     if (destino !== undefined && (indiceDe(destino) < 0 || destino === op.nombre)) {
       falla(
         (destino === op.nombre ? undefined : capaAntigua(destino)) ?? {
-          codigo: CODIGOS.E_THEME_UNKNOWN_LAYER,
+          codigo: CODES.E_THEME_UNKNOWN_LAYER,
           mensaje: destino === op.nombre ? `Layer '${op.nombre}' cannot be placed relative to itself` : `${lado === 'antes' ? 'before' : 'after'} '${destino}': that Layer does not exist`,
           ...sugerir(destino, nombres().filter((n) => n !== op.nombre)),
         },
@@ -100,7 +100,7 @@ export function aplicarOps(
     if (existente === undefined && destino === undefined && modo === 'parchear') {
       falla(
         capaAntigua(op.nombre) ?? {
-          codigo: CODIGOS.E_THEME_PATCH_WITHOUT_PLACEMENT,
+          codigo: CODES.E_THEME_PATCH_WITHOUT_PLACEMENT,
           mensaje: `Layer '${op.nombre}' does not exist; to add it, give 'before' or 'after' another Layer`,
           ...sugerir(op.nombre, nombres()),
         },
@@ -109,7 +109,7 @@ export function aplicarOps(
       return;
     }
     if (existente === undefined && op.primitiva === undefined) {
-      falla({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `The new Layer '${op.nombre}' requires a Primitive` }, 'nombre');
+      falla({ codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `The new Layer '${op.nombre}' requires a Primitive` }, 'nombre');
       return;
     }
 
@@ -178,19 +178,19 @@ export function opTocaMetricas(op: OpDeCapa, pilas: ReadonlyArray<readonly CapaD
 
 export type ResultadoDeEstado =
   | { estado: Estado }
-  | { error: { code: typeof CODIGOS.E_THEME_UNKNOWN_STATE | typeof CODIGOS.E_OLD_CATALOG_VALUE; message: string; candidatos: string[] } };
+  | { error: { code: typeof CODES.E_THEME_UNKNOWN_STATE | typeof CODES.E_OLD_CATALOG_VALUE; message: string; candidatos: string[] } };
 
 /** Error `theme-unknown-state` con candidatos cercanos si no es de `ESTADOS`; un nombre antiguo es `old-catalog-value` con el nuevo como unico candidato. */
 export function parsearEstado(escrito: string): ResultadoDeEstado {
   const estado = ESTADOS.find((e) => e === escrito);
   if (estado !== undefined) return { estado };
   const antiguo = errorDeValorAntiguo('state', escrito);
-  if (antiguo?.candidato !== undefined) return { error: { code: CODIGOS.E_OLD_CATALOG_VALUE, message: antiguo.mensaje, candidatos: [antiguo.candidato] } };
+  if (antiguo?.candidato !== undefined) return { error: { code: CODES.E_OLD_CATALOG_VALUE, message: antiguo.mensaje, candidatos: [antiguo.candidato] } };
   return {
     error: {
-      code: CODIGOS.E_THEME_UNKNOWN_STATE,
+      code: CODES.E_THEME_UNKNOWN_STATE,
       message: `Unknown state '${escrito}'; available: ${ESTADOS.join(', ')}`,
-      candidatos: candidatosCercanos(escrito, ESTADOS),
+      candidatos: nearestCandidates(escrito, ESTADOS),
     },
   };
 }

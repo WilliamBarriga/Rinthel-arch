@@ -2,7 +2,7 @@
  * Elementos de Tema de secuencia y ER descritos (`inspect theme`). Un declarado sale tal como lo escribe el Tema
  * (colores como nombre de Paleta); uno no declarado solo sale en su Tipo de diagrama, derivado y marcado `derivado`.
  */
-import type { Tema } from 'canonico';
+import type { Theme } from 'canonical';
 
 import { estiloResuelto } from './estilo';
 import type { CapaPintada, PinturaDeActivacion, PinturaDeCajaDeSecuencia, PinturaDeSecuencia, PrimitivaPintada, TrazosDeSecuencia } from './estilo';
@@ -57,7 +57,7 @@ function derivado(nombre: BloqueDeSecuencia, pintura: PinturaDeSecuencia, tipo: 
 }
 
 /** Los declarados llevan los parches de `diagrama`; `tipo` es el Tipo de Nodo de la activacion derivada. */
-export function elementosDeTema(tema: Tema, diagrama: TipoDeDiagrama | undefined, tipo?: string): ElementosDescritos {
+export function elementosDeTema(tema: Theme, diagrama: TipoDeDiagrama | undefined, tipo?: string): ElementosDescritos {
   const resuelto = temaParaDiagrama(resolverTema(tema), diagrama);
   const pinturaDerivada = diagrama === 'sequence' ? estiloResuelto(tema, { diagrama }).pintura.secuencia : undefined;
   const secuencia = Object.fromEntries(

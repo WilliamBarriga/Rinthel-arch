@@ -1,6 +1,6 @@
 /** Modulo hoja: lo usan `metricas` y `slots` sin depender uno del otro. */
 
-import type { Atributo, ClaveDeAtributo, NodoResuelto } from 'canonico';
+import type { Attribute, AttributeKey, ResolvedNode } from 'canonical';
 
 import type { NombreDeSlot } from './catalogo';
 import { slotsDe } from './disposicion';
@@ -9,7 +9,7 @@ import type { Metricas } from './metricas';
 
 export interface ContenidoDeNodo {
   titulo: string;
-  atributos: readonly Atributo[];
+  atributos: readonly Attribute[];
   icono: boolean;
   /** Slot `badge`. */
   tipo?: string;
@@ -23,9 +23,9 @@ export interface ContenidoDeNodo {
 
 /** Solo los de un Nodo hoja (un Grupo colapsado es hoja) y solo si el Tema lista el Slot `attrs`. */
 export function atributosVisibles(
-  nodo: Pick<NodoResuelto, 'children' | 'attributes'>,
+  nodo: Pick<ResolvedNode, 'children' | 'attributes'>,
   metricas: Pick<Metricas, 'disposicion'>,
-): readonly Atributo[] {
+): readonly Attribute[] {
   return nodo.children.length === 0 && muestra(metricas, 'attrs') ? nodo.attributes : [];
 }
 
@@ -39,7 +39,7 @@ export function muestra(metricas: Pick<Metricas, 'disposicion'>, slot: NombreDeS
 }
 
 export function contenidoDeNodo(
-  nodo: Pick<NodoResuelto, 'children' | 'attributes' | 'label' | 'icon' | 'type' | 'description' | 'source' | 'collapsed' | 'childCount'>,
+  nodo: Pick<ResolvedNode, 'children' | 'attributes' | 'label' | 'icon' | 'type' | 'description' | 'source' | 'collapsed' | 'childCount'>,
   metricas: Pick<Metricas, 'disposicion' | 'iconoEsPunto'>,
 ): ContenidoDeNodo {
   const cuenta = nodo.collapsed ? nodo.childCount : undefined;
@@ -56,7 +56,7 @@ export function contenidoDeNodo(
 }
 
 /** Con `marcas` (Vista ER) el tipo lleva `?` si el Atributo es opcional. */
-export function textoDeAtributo(atributo: Atributo, marcas = false): string {
+export function textoDeAtributo(atributo: Attribute, marcas = false): string {
   return `${atributo.name}: ${atributo.type}${marcas && atributo.optional === true ? '?' : ''}`;
 }
 
@@ -67,7 +67,7 @@ export interface PiezaDeAtributo {
 }
 
 /** Con `metricas.tamanoDeFila` el nombre y el tipo son piezas de distinto tamano; sin el, una sola pieza al tamano de `attrs`. */
-export function piezasDeAtributo(atributo: Atributo, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): PiezaDeAtributo[] {
+export function piezasDeAtributo(atributo: Attribute, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): PiezaDeAtributo[] {
   const marcas = metricas.marcasDeClave === true;
   const base = metricas.fontSize * metricas.escalaAtributo;
   const { name, type } = metricas.tamanoDeFila ?? {};
@@ -81,7 +81,7 @@ export function piezasDeAtributo(atributo: Atributo, metricas: Pick<Metricas, 'f
 
 /** `derecha` es su distancia al borde derecho de la fila. `planned` es la marca Planeado (ADR 0011), tras las de clave. */
 export interface ChipDeClave {
-  clave: ClaveDeAtributo | 'planned';
+  clave: AttributeKey | 'planned';
   texto: string;
   derecha: number;
   width: number;
@@ -99,9 +99,9 @@ const TEXTO_DE_PLANEADO = 'PLAN';
  * De izquierda a derecha en el orden de `keys` y, si el Atributo lleva la marca `planned`, su chip al final; vacio
  * fuera de una Vista ER (`metricas.marcasDeClave`). El ancho de un chip sale de su texto.
  */
-export function chipsDeClaves(atributo: Pick<Atributo, 'keys' | 'planned'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): ChipDeClave[] {
+export function chipsDeClaves(atributo: Pick<Attribute, 'keys' | 'planned'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): ChipDeClave[] {
   if (metricas.marcasDeClave !== true) return [];
-  const marcas: Array<ClaveDeAtributo | 'planned'> = [...(atributo.keys ?? []), ...(atributo.planned === true ? (['planned'] as const) : [])];
+  const marcas: Array<AttributeKey | 'planned'> = [...(atributo.keys ?? []), ...(atributo.planned === true ? (['planned'] as const) : [])];
   const tamano = metricas.tamanoDeFila?.key ?? Math.round(metricas.fontSize * metricas.escalaAtributo * 0.8 * 10) / 10;
   const chips: ChipDeClave[] = [];
   let derecha = MARGEN_DERECHO_DE_CHIPS;
@@ -115,7 +115,7 @@ export function chipsDeClaves(atributo: Pick<Atributo, 'keys' | 'planned'>, metr
 }
 
 /** Incluye la holgura que los separa del texto; 0 sin chips. */
-export function anchoDeChips(atributo: Pick<Atributo, 'keys' | 'planned'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): number {
+export function anchoDeChips(atributo: Pick<Attribute, 'keys' | 'planned'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): number {
   const chips = chipsDeClaves(atributo, metricas);
   return chips.length === 0 ? 0 : HOLGURA_ANTES_DE_CHIPS + Math.max(...chips.map((c) => c.derecha + c.width));
 }

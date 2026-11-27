@@ -9,8 +9,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { SCAN_CONTRACT_VERSION, scanSummarySchema } from 'canonico';
-import type { ScanChanges, ScanSummary } from 'canonico';
+import { SCAN_CONTRACT_VERSION, scanSummarySchema } from 'canonical';
+import type { ScanChanges, ScanSummary } from 'canonical';
 import { DEFAULT_DEPTH, DEFAULT_MAX_FILES, SCAN_DRAFT_SCHEMA, byCodeUnit, diffDrafts, idMatcher, scan, serializeDraft } from 'scanner';
 import type { ScanDraft } from 'scanner';
 

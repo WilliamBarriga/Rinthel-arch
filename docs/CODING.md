@@ -4,7 +4,7 @@ Design vocabulary: **Module**, **Interface**, **Seam**, **Adapter**, **Depth** (
 
 ## Structure
 
-Monorepo with workspaces. One package in `packages/` per deep module (canonico, tema, dsl, layout, sesion, render, shell, estudio, cli, scanner). The module's interface is the package: whatever does not leave through the `exports` of its `package.json` is private. `exports` declares only `.`; the only exception is `estudio`, with `./protocolo` (types of the `dev` protocol that `cli` imports without loading the app), `./contrato` (test-only contract suite) and `./construir` (builds the app bundle; used by its build and the bench). A package is imported by its name; internal files of another package are not imported.
+Monorepo with workspaces. One package in `packages/` per deep module (canonical, tema, dsl, layout, sesion, render, shell, estudio, cli, scanner). The module's interface is the package: whatever does not leave through the `exports` of its `package.json` is private. `exports` declares only `.`; the only exception is `estudio`, with `./protocolo` (types of the `dev` protocol that `cli` imports without loading the app), `./contrato` (test-only contract suite) and `./construir` (builds the app bundle; used by its build and the bench). A package is imported by its name; internal files of another package are not imported.
 
 ## Deep modules
 
@@ -19,7 +19,7 @@ Monorepo with workspaces. One package in `packages/` per deep module (canonico, 
 - **Ports**: interfaces the core defines according to what it needs. **Adapters**: file system, ELK, d3-zoom, Web Worker, CLI; they live at the edge and depend on the core, never the other way around.
 - A seam exists when something varies across it: one adapter is a hypothetical seam, two is a real one. With a single adapter, a direct call.
 - Dependencies come in as arguments; functions return results instead of mutating.
-- Dependency direction: `canonico -> tema -> dsl -> layout -> sesion -> render -> shell -> estudio -> cli`. A package only imports from the earlier ones. `tema` comes after `canonico` because it reuses its `Issue` and codes, and before `dsl` because the Theme compiler validates against its catalog (ADR 0004, amendment).
+- Dependency direction: `canonical -> tema -> dsl -> layout -> sesion -> render -> shell -> estudio -> cli`. A package only imports from the earlier ones. `tema` comes after `canonical` because it reuses its `Issue` and codes, and before `dsl` because the Theme compiler validates against its catalog (ADR 0004, amendment).
 - `scanner` sits outside the chain (ADR 0010): it imports no workspace package and only `cli` imports it (`AISLADOS` in `scripts/check-dependencies.ts`).
 - The core is agnostic of the Documented project (see `AGENTS.md`).
 
@@ -47,8 +47,8 @@ Monorepo with workspaces. One package in `packages/` per deep module (canonico, 
 5. `Related ADR`: the ADR of the package's contract.
 6. `Test`: `pnpm --filter <package> test`.
 
-Model: `packages/canonico/README.md`. `pnpm check:docs` fails if a package has no README or if it loses a section, names a nonexistent entry file or does not give the `Test` command.
+Model: `packages/canonical/README.md`. `pnpm check:docs` fails if a package has no README or if it loses a section, names a nonexistent entry file or does not give the `Test` command.
 
 ## Automatic checks
 
-The dependency direction, internal imports between packages, the `exports` surface and core purity (`canonico`, `tema`, `dsl`, `sesion`, `render`: no `node:*`, clock, randomness, `process`, network or DOM; `layout`, `shell`, `estudio` and `cli` are adapters), that no file re-exports (`export ... from`) from another package except `estudio/protocolo` and the `shell` facade, and that `scripts/` and `bench/` use from packages only their name or what `exports` declares (never their `test/` or `scripts/` by path), are verified by `scripts/check-dependencies.ts` (`pnpm check:deps`); they are not repeated in review.
+The dependency direction, internal imports between packages, the `exports` surface and core purity (`canonical`, `tema`, `dsl`, `sesion`, `render`: no `node:*`, clock, randomness, `process`, network or DOM; `layout`, `shell`, `estudio` and `cli` are adapters), that no file re-exports (`export ... from`) from another package except `estudio/protocolo` and the `shell` facade, and that `scripts/` and `bench/` use from packages only their name or what `exports` declares (never their `test/` or `scripts/` by path), are verified by `scripts/check-dependencies.ts` (`pnpm check:deps`); they are not repeated in review.

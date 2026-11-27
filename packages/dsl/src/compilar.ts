@@ -1,23 +1,23 @@
 /** Parsea cada archivo con Langium y traduce el AST a la Fuente canonica. Puro: no lee disco. */
-import { CODIGOS, TIPOS_DE_VISTA, combineIconProviders, fuenteCanonicaSchema, genericIcons, validate, vistaSchema, workspaceIcons } from 'canonico';
+import { CODES, VIEW_TYPES, combineIconProviders, canonicalFormSchema, genericIcons, validate, viewSchema, workspaceIcons } from 'canonical';
 import type {
-  Arista,
-  Atributo,
-  ClaveDeAtributo,
-  ElementoDePaso,
-  Extremo,
-  FuenteCanonica,
-  Interaccion,
-  ItemDeInteraccion,
+  Edge as Arista,
+  Attribute as Atributo,
+  AttributeKey,
+  StepElement,
+  Endpoint,
+  CanonicalForm,
+  Interaction as Interaccion,
+  InteractionItem as ItemDeInteraccion,
   Issue,
-  Nodo,
-  OverrideDeNodo,
-  Paso,
-  ReferenciaOpaca,
-  TipoDeNodo,
-  Ubicador,
-  Vista,
-} from 'canonico';
+  Node,
+  NodeOverride as OverrideDeNodo,
+  Step as Paso,
+  OpaqueReference,
+  NodeKind,
+  Locator,
+  View as Vista,
+} from 'canonical';
 import {
   EmptyFileSystem,
   createDefaultCoreModule,
@@ -48,14 +48,14 @@ export interface PosicionDePin {
 
 export interface ResultadoDeCompilacion {
   /** Presente solo si no hay issues con severidad `error`. */
-  canonico?: FuenteCanonica;
+  canonico?: CanonicalForm;
   /** Todos los issues, ordenados por archivo, linea, columna y codigo. */
   issues: Issue[];
   /** Posicion de cada override con `pin`, en orden de aparicion. */
   pins: PosicionDePin[];
-  /** Donde se escribio cada valor de la Fuente canonica; presente junto a `canonico`. */
-  ubicar?: Ubicador;
-  /** Origen de las Capas de cada Tema declarado (cadena `extends`, `part` usadas y sitio de cada Capa); presente junto a `canonico`. */
+  /** Donde se escribio cada valor de la Fuente canonica; presente junto a `canonical`. */
+  ubicar?: Locator;
+  /** Origen de las Capas de cada Tema declarado (cadena `extends`, `part` usadas y sitio de cada Capa); presente junto a `canonical`. */
   origenesDeTemas?: Record<string, OrigenDeTema>;
 }
 
@@ -76,7 +76,7 @@ function servicios(): LangiumCoreServices {
 
 export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion {
   const issues: Issue[] = [];
-  const tiposDeNodo: TipoDeNodo[] = [];
+  const tiposDeNodo: NodeKind[] = [];
   const conSintaxisRota = new Set<string>();
   const temasDeclarados: TemaDeclarado[] = temasIncorporados((texto) => servicios().parser.LangiumParser.parse<Documento>(texto).value).map((tema) => ({
     archivo: ARCHIVO_INCORPORADOS,
@@ -99,7 +99,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
 
     for (const spec of resultado.value.specifications) {
       for (const decl of spec.nodeTypes) {
-        const tipo: TipoDeNodo = { name: decl.name, description: '' };
+        const tipo: NodeKind = { name: decl.name, description: '' };
         for (const prop of decl.props) {
           const valor = prop.value;
           if (prop.key === 'description') tipo.description = valor;
@@ -137,7 +137,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
 
   const registro = new Map<string, NodoRegistrado>();
   const contexto: Contexto = { registro, issues };
-  const nodos: Nodo[] = [];
+  const nodos: Node[] = [];
   for (const { archivo, elementos } of raices) {
     for (const elemento of elementos) {
       const nodo = compilarElemento(elemento, '', archivo, contexto);
@@ -177,7 +177,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     issues.push(...delOverride);
     if (ops.length > 0) vista.themePatch = ops.map((op) => ({ ...op }));
   }
-  const fuente: FuenteCanonica = {
+  const fuente: CanonicalForm = {
     themes: temas,
     specification: { nodeTypes: tiposDeNodo },
     model: { nodes: nodos, edges: aristas, interactions: interacciones },
@@ -195,8 +195,8 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   });
   // Un Tema declarado que no se resolvio ya tiene su error (`delTema`); no se reporta otra vez como no declarado.
   const sinResolver = new Set(temasDeclarados.map(({ ast }) => ast.name).filter((nombre) => !temas.some((t) => t.name === nombre)));
-  const sinTema = (issue: Issue): boolean => issue.code === CODIGOS.E_UNKNOWN_THEME && vistas.some(({ vista }) => vista.theme !== undefined && sinResolver.has(vista.theme) && issue.message === `Theme '${vista.theme}' is not declared`);
-  issues.push(...validate(fuente, { iconos: combineIconProviders(workspaceIcons(workspace), genericIcons()), ubicar }).filter((issue) => !sinTema(issue)));
+  const sinTema = (issue: Issue): boolean => issue.code === CODES.E_UNKNOWN_THEME && vistas.some(({ vista }) => vista.theme !== undefined && sinResolver.has(vista.theme) && issue.message === `Theme '${vista.theme}' is not declared`);
+  issues.push(...validate(fuente, { icons: combineIconProviders(workspaceIcons(workspace), genericIcons()), locate: ubicar }).filter((issue) => !sinTema(issue)));
 
   const pins: PosicionDePin[] = [];
   for (const { vista, archivo, ast } of vistas) {
@@ -207,7 +207,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   issues.sort(compararIssues);
   if (issues.some((issue) => issue.severity === 'error')) return { issues, pins };
   return {
-    canonico: fuenteCanonicaSchema.parse(fuente),
+    canonico: canonicalFormSchema.parse(fuente),
     issues,
     pins,
     ubicar,
@@ -216,7 +216,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
 }
 
 interface NodoRegistrado {
-  nodo: Nodo;
+  nodo: Node;
   ast: Element;
   origen: { file: string; line: number; column: number };
 }
@@ -231,20 +231,20 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
   const tipo = vista.props.find((prop) => prop.$type === 'ViewType');
   if (tipo === undefined) {
     issues.push({
-      code: CODIGOS.E_UNKNOWN_VIEW_TYPE,
+      code: CODES.E_UNKNOWN_VIEW_TYPE,
       severity: 'error',
       file: archivo,
       ...rangoDe(vista, 'name').start,
-      message: `View '${vista.name}' does not declare 'type' (${TIPOS_DE_VISTA.join(' | ')})`,
+      message: `View '${vista.name}' does not declare 'type' (${VIEW_TYPES.join(' | ')})`,
     });
     return undefined;
   }
-  const tipoValido = vistaSchema.shape.type.safeParse(tipo.value);
+  const tipoValido = viewSchema.shape.type.safeParse(tipo.value);
   if (!tipoValido.success) {
     issues.push(
       issueConSugerencia(
-        { code: CODIGOS.E_UNKNOWN_VIEW_TYPE, message: `Unknown View type '${tipo.value}' (${TIPOS_DE_VISTA.join(' | ')})` },
-        archivo, tipo, 'value', TIPOS_DE_VISTA,
+        { code: CODES.E_UNKNOWN_VIEW_TYPE, message: `Unknown View type '${tipo.value}' (${VIEW_TYPES.join(' | ')})` },
+        archivo, tipo, 'value', VIEW_TYPES,
       ),
     );
     return undefined;
@@ -275,7 +275,7 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
 }
 
 function pasoDe(paso: Step): Paso {
-  const items = (clase: 'StepShow' | 'StepHide'): ElementoDePaso[] =>
+  const items = (clase: 'StepShow' | 'StepHide'): StepElement[] =>
     paso.actions.flatMap((accion) =>
       accion.$type === clase
         ? accion.items.map((item) => (item.$type === 'StepEdge' ? { from: item.from, to: item.to } : { selector: item.selector }))
@@ -310,14 +310,14 @@ function compilarElemento(
   prefijo: string,
   archivo: string,
   contexto: Contexto,
-): Nodo | undefined {
+): Node | undefined {
   const { registro, issues } = contexto;
   const id = prefijo === '' ? elemento.name : `${prefijo}.${elemento.name}`;
   const { start: sitio } = rangoDe(elemento, 'name');
   const original = registro.get(id);
   if (original !== undefined) {
     issues.push({
-      code: CODIGOS.E_DUPLICATE_NODE,
+      code: CODES.E_DUPLICATE_NODE,
       severity: 'error',
       file: archivo,
       ...sitio,
@@ -326,7 +326,7 @@ function compilarElemento(
     });
     return undefined;
   }
-  const nodo: Nodo = {
+  const nodo: Node = {
     id,
     type: elemento.type,
     title: elemento.title ?? elemento.name,
@@ -341,7 +341,7 @@ function compilarElemento(
   return nodo;
 }
 
-function compilarHijos(elementos: readonly Element[], prefijo: string, archivo: string, contexto: Contexto): Nodo[] {
+function compilarHijos(elementos: readonly Element[], prefijo: string, archivo: string, contexto: Contexto): Node[] {
   return elementos.flatMap((hijo) => compilarElemento(hijo, prefijo, archivo, contexto) ?? []);
 }
 
@@ -362,7 +362,7 @@ function aplicarExtensiones(
   }
   for (const { archivo, extension } of pendientes) {
     contexto.issues.push({
-      code: CODIGOS.E_UNKNOWN_EXTEND_TARGET,
+      code: CODES.E_UNKNOWN_EXTEND_TARGET,
       severity: 'error',
       file: archivo,
       ...rangoDe(extension, 'target').start,
@@ -388,13 +388,13 @@ function compilarExtension(extension: Extend, archivo: string, contexto: Context
  */
 function atributosDe(bloques: readonly Attrs[], sueltos: readonly Attribute[], archivo: string, issues: Issue[]): Atributo[] {
   return [...bloques.flatMap((bloque) => bloque.items), ...sueltos].map((item) => {
-    const claves = [...new Set(item.keys)] as ClaveDeAtributo[];
+    const claves = [...new Set(item.keys)] as AttributeKey[];
     item.keys.forEach((clave, i) => {
       if (item.keys.indexOf(clave) === i) return;
       const { start, end } = rangoDeIndice(item, 'keys', i);
       const previo = rangoDeIndice(item, 'keys', i - 1);
       issues.push({
-        code: CODIGOS.E_DUPLICATE_KEY_MARK,
+        code: CODES.E_DUPLICATE_KEY_MARK,
         severity: 'error',
         file: archivo,
         ...start,
@@ -418,13 +418,13 @@ function atributosDe(bloques: readonly Attrs[], sueltos: readonly Attribute[], a
 const TIPOS_DE_FUENTE = ['path', 'spec', 'file', 'url', 'git'] as const;
 
 /** The refs stay opaque; an unknown kind (`kind "spec"`, a typo) is the warning `unknown-source-kind`. */
-function referenciasDe(bloques: readonly Source[], archivo: string, issues: Issue[]): ReferenciaOpaca[] {
+function referenciasDe(bloques: readonly Source[], archivo: string, issues: Issue[]): OpaqueReference[] {
   return bloques.flatMap((bloque) =>
     bloque.items.map((item) => {
       if (!(TIPOS_DE_FUENTE as readonly string[]).includes(item.kind)) {
         const issue = issueConSugerencia(
           {
-            code: CODIGOS.W_UNKNOWN_SOURCE_KIND,
+            code: CODES.W_UNKNOWN_SOURCE_KIND,
             message: `Source kind '${item.kind}' is not known (${TIPOS_DE_FUENTE.join(', ')}); write '<kind> "<ref>"', e.g. 'spec "prd.md#2"'`,
           },
           archivo,
@@ -443,10 +443,10 @@ function referenciasDe(bloques: readonly Source[], archivo: string, issues: Issu
 
 /**
  * Las Aristas se compilan tal cual; que sus extremos existan lo comprueba
- * `validate` de `canonico` (con la posicion que aporta el `Ubicador`).
+ * `validate` de `canonical` (con la posicion que aporta el `Ubicador`).
  */
 function compilarArista(arista: Edge): Arista {
-  const extremo = ({ node, attribute }: Edge['from']): Extremo => ({
+  const extremo = ({ node, attribute }: Edge['from']): Endpoint => ({
     node,
     ...(attribute !== undefined && { attribute }),
   });
@@ -503,7 +503,7 @@ function issuesDeSintaxis(
   resultado: ParseResult<Documento>,
 ): Issue[] {
   const sintaxis = (message: string, line: number, column: number): Issue => ({
-    code: CODIGOS.E_SYNTAX_ERROR,
+    code: CODES.E_SYNTAX_ERROR,
     severity: 'error',
     file: archivo,
     line,

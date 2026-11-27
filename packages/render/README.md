@@ -9,11 +9,11 @@ React component `<Diagram>` that draws a resolved View with its Geometry and the
 
 ## What it does not do
 - Does not compute positions nor validate Themes: that is `layout` and `tema`.
-- Does not resolve Views nor interpret Steps: that is `canonico`; selection and camera state is `shell`'s.
+- Does not resolve Views nor interpret Steps: that is `canonical`; selection and camera state is `shell`'s.
 - Does not touch disk, clock or network: it is pure core.
 
 ## Depends on
-`canonico`, `layout` and `tema` (`docs/CODING.md`, "Dependency direction"). External dependency: peer `react` 18 or 19.
+`canonical`, `layout` and `tema` (`docs/CODING.md`, "Dependency direction"). External dependency: peer `react` 18 or 19.
 
 ## Entry file
 `packages/render/src/index.ts` (the header documents props, invariants and error modes).

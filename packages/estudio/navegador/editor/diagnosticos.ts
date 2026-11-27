@@ -1,5 +1,5 @@
 /**
- * Issues en linea: los `IssueDeDev` del estado (SSE) de un archivo se vuelven `Diagnostic` de `@codemirror/lint` en su
+ * Issues en linea: los `DevIssue` del estado (SSE) de un archivo se vuelven `Diagnostic` de `@codemirror/lint` en su
  * posicion, con el `fix` como accion "Aplicar fix" (`aplicarFix` recibe el `fix` y su issue; quien lo aplica contra
  * `dev` usa `issues/aplicar-fix.ts`, el mismo que el panel Issues). Puro.
  */

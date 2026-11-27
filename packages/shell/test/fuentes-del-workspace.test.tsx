@@ -1,8 +1,8 @@
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
-import type { Geometria } from 'canonico';
+import { canonicalFormSchema } from 'canonical';
+import type { Geometry } from 'canonical';
 import { VistaInteractiva, hashesDeFamilias } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -13,12 +13,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const fuente = fuenteCanonicaSchema.parse({
+const fuente = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'servicio' }] },
   model: { nodes: [{ id: 'a', type: 'servicio', title: 'a', description: '', children: [] }], edges: [] },
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
 });
-const geometria: Geometria = { nodes: { a: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 100, height: 50 };
+const geometria: Geometry = { nodes: { a: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 100, height: 50 };
 const CAVEAT: TemaResuelto = { ...TEMA_NEUTRO, fonts: { body: 'Caveat', mono: 'Caveat', fallback: 'cursive' } };
 const ARCHIVOS = { 'fuentes/caveat-latin-400-normal.woff2': 'h400', 'fuentes/caveat-latin-700-normal.woff2': 'h700', 'fuentes/inter-latin-400-normal.woff2': 'hi' };
 const url = (ruta: string): string => `/fuentes/${ruta}`;

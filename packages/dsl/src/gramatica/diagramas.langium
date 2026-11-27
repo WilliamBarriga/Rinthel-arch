@@ -70,7 +70,7 @@ InteractionRef:
 ;
 
 // `opt|loop|break|critical ["guarda"] { }`, `alt ["guarda"] { } else ["guarda"] { }`, `par { } and { }`.
-// El parser acepta cualquier operador con `else`/`and` en cualquier cantidad; `canonico` emite
+// El parser acepta cualquier operador con `else`/`and` en cualquier cantidad; `canonical` emite
 // `invalid-fragment-operand`, no `syntax-error`.
 Fragment:
   operator=('opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par') operands+=FirstOperand operands+=NextOperand*

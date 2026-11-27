@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
 
-import { urlDeFuente as urlDeFuenteDeDev } from 'canonico';
+import { fontUrl as urlDeFuenteDeDev } from 'canonical';
 import { deserializarEstado, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeHash, AdaptadorDeLayout, Navegacion, PropsDeEstadoEnHash } from 'shell';
 

@@ -4,14 +4,14 @@
  */
 import { useEffect, useRef, useState } from 'react';
 
-import type { EstadoDeColapso, FuenteCanonica } from 'canonico';
+import type { CollapseState, CanonicalForm } from 'canonical';
 import type { Camara } from 'render';
 
 import { deserializarEstado, pasoInicialDeVista, serializarEstado, vistaPorDefecto } from './hash';
 import type { AdaptadorDeHash, EstadoDeShell } from './hash';
 
 export interface OpcionesDeEstadoEnHash {
-  source: FuenteCanonica;
+  source: CanonicalForm;
   hash: AdaptadorDeHash;
   /** Vista inicial cuando el hash no dice otra; por defecto la primera de la Fuente. */
   defaultView?: string;
@@ -23,12 +23,12 @@ export interface OpcionesDeEstadoEnHash {
 export interface PropsDeEstadoEnHash {
   view: string;
   path: string[];
-  state: EstadoDeColapso;
+  state: CollapseState;
   selected: string | null;
   step: number;
   camera?: Camara;
   onPathChange: (ruta: string[]) => void;
-  onStateChange: (estado: EstadoDeColapso) => void;
+  onStateChange: (estado: CollapseState) => void;
   onSelect: (id: string) => void;
   onStepChange: (paso: number) => void;
   onCameraChange: (camara: Camara) => void;

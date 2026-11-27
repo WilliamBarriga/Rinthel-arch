@@ -1,5 +1,5 @@
-import { CODIGOS, candidatosCercanos, resolveView } from 'canonico';
-import type { FuenteCanonica, Geometria, GeometriaCacheada, GeometriaGrafo, Issue, Tema, Ubicador, Vista } from 'canonico';
+import { CODES, nearestCandidates, resolveView } from 'canonical';
+import type { CanonicalForm, Geometry, CachedGeometry, GraphGeometry, Issue, Theme, Locator, View } from 'canonical';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, OrigenDeTema, PosicionDePin, ResultadoDeCompilacion } from 'dsl';
 import { claveDeLayout, layoutView } from 'layout';
@@ -51,9 +51,9 @@ export interface ResultadoDeConstruir {
 /** Estado compilado de un Workspace; valor inmutable. Cada Sesion compila todo el Workspace (sin compilacion incremental). */
 export interface Sesion {
   /** Fuente canonica; ausente si la compilacion tiene errores. */
-  readonly fuente: FuenteCanonica | undefined;
+  readonly fuente: CanonicalForm | undefined;
   /** Ubicador de la Fuente (archivo y rango de cada valor); ausente junto a `fuente`. */
-  readonly ubicar: Ubicador | undefined;
+  readonly ubicar: Locator | undefined;
   /** Origen de las Capas de cada Tema declarado en el texto (cadena `extends`, `part`, sitio de cada Capa); vacio sin Fuente. */
   readonly origenesDeTema: Readonly<Record<string, OrigenDeTema>>;
   /**
@@ -68,7 +68,7 @@ export interface Sesion {
    * de la Vista dibujada con ese Tema declarado, sin memoizar (`undefined` si el Tema no existe). Un fallo interno de
    * layout rechaza la promesa.
    */
-  geometria(vista: string, opciones?: OpcionesDeGeometria): Promise<GeometriaCacheada | undefined>;
+  geometria(vista: string, opciones?: OpcionesDeGeometria): Promise<CachedGeometry | undefined>;
   /** Estilo resuelto (Metricas y pintura) del Tema de una Vista; `undefined` si la Vista no existe. Sincrono: no necesita layout. */
   estilo(vista: string): EstiloResuelto | undefined;
   /** Consulta de solo lectura, sincrona y sin layout; `undefined` si la Sesion no tiene Fuente. */
@@ -84,7 +84,7 @@ export interface Sesion {
 
 const json = (valor: unknown): string => `${JSON.stringify(valor, null, 2)}\n`;
 
-function temaDeVista(fuente: FuenteCanonica, vista: Vista, global: string | undefined): Tema {
+function temaDeVista(fuente: CanonicalForm, vista: View, global: string | undefined): Theme {
   const nombre = vista.theme ?? global ?? TEMA_NEUTRO.name;
   return fuente.themes.find((tema) => tema.name === nombre) ?? TEMA_NEUTRO;
 }
@@ -93,7 +93,7 @@ function temaDeVista(fuente: FuenteCanonica, vista: Vista, global: string | unde
  * `overlapping-pins`: un aviso por par de Pins solapados, situado en el primero y con el segundo en `related`.
  * Un par sin posicion de texto conocida (Pin que no viene del DSL) no se avisa.
  */
-function avisosDePins(vista: string, geometry: Geometria, pins: readonly PosicionDePin[]): Issue[] {
+function avisosDePins(vista: string, geometry: Geometry, pins: readonly PosicionDePin[]): Issue[] {
   switch (geometry.kind) {
     case 'grafo':
       return avisosDePinsDeGrafo(vista, geometry, pins);
@@ -102,14 +102,14 @@ function avisosDePins(vista: string, geometry: Geometria, pins: readonly Posicio
   }
 }
 
-function avisosDePinsDeGrafo(vista: string, geometry: GeometriaGrafo, pins: readonly PosicionDePin[]): Issue[] {
+function avisosDePinsDeGrafo(vista: string, geometry: GraphGeometry, pins: readonly PosicionDePin[]): Issue[] {
   const posicionDe = (nodo: string) => pins.find((pin) => pin.view === vista && pin.node === nodo);
   return geometry.pinsSolapados.flatMap(([a, b]) => {
     const [primero, segundo] = [posicionDe(a), posicionDe(b)];
     if (primero === undefined || segundo === undefined) return [];
     return [
       {
-        code: CODIGOS.W_OVERLAPPING_PINS,
+        code: CODES.W_OVERLAPPING_PINS,
         severity: 'warning' as const,
         file: primero.file,
         line: primero.line,
@@ -121,16 +121,16 @@ function avisosDePinsDeGrafo(vista: string, geometry: GeometriaGrafo, pins: read
   });
 }
 
-const coloresDeTipos = (fuente: FuenteCanonica): Record<string, string | undefined> =>
+const coloresDeTipos = (fuente: CanonicalForm): Record<string, string | undefined> =>
   Object.fromEntries(fuente.specification.nodeTypes.map((tipo) => [tipo.name, typeof tipo['color'] === 'string' ? tipo['color'] : undefined]));
 
 /**
  * Solo warnings: `theme-low-contrast` por Tema, Tipo y estado (en el nombre del Tema) y `theme-color-only`
  * por Vista cuando dos de sus Tipos solo difieren por color (en el id de la Vista).
  */
-function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefined, global: string | undefined): Issue[] {
+function avisosDeAccesibilidad(fuente: CanonicalForm, ubicar: Locator | undefined, global: string | undefined): Issue[] {
   /** Posicion del valor en `ruta`; `null` si su archivo no es fiable (no se avisa). */
-  const sitio = (ruta: Parameters<Ubicador>[0]): { file: string; line: number; column: number } | null => {
+  const sitio = (ruta: Parameters<Locator>[0]): { file: string; line: number; column: number } | null => {
     const donde = ubicar === undefined ? { file: '(canonico)', range: { start: { line: 1, column: 1 } } } : ubicar(ruta);
     return donde === null ? null : { file: donde.file, ...donde.range.start };
   };
@@ -140,7 +140,7 @@ function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefi
     const donde = sitio(['themes', i, 'name']);
     if (donde === null) return;
     for (const aviso of advertenciasDeContraste(tema, colores)) {
-      issues.push({ code: CODIGOS.W_THEME_LOW_CONTRAST, severity: 'warning', ...donde, message: `Theme '${tema.name}': ${aviso.mensaje}`, hint: `adjust Layer '${aviso.capa}' or the Palette colors` });
+      issues.push({ code: CODES.W_THEME_LOW_CONTRAST, severity: 'warning', ...donde, message: `Theme '${tema.name}': ${aviso.mensaje}`, hint: `adjust Layer '${aviso.capa}' or the Palette colors` });
     }
   });
   fuente.views.forEach((declarada, i) => {
@@ -150,7 +150,7 @@ function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefi
     const usados = new Set(resuelta.nodes.map((n) => n.type));
     const tipos = fuente.specification.nodeTypes.filter((t) => usados.has(t.name)).map((t) => ({ name: t.name, color: colores[t.name], icon: t.icon }));
     const tema = temaDeVista(fuente, declarada, global);
-    const aviso = (message: string): Issue => ({ code: CODIGOS.W_THEME_COLOR_ONLY, severity: 'warning', ...donde, message, hint: 'give the Theme a different stroke, marker or style; color alone is not enough' });
+    const aviso = (message: string): Issue => ({ code: CODES.W_THEME_COLOR_ONLY, severity: 'warning', ...donde, message, hint: 'give the Theme a different stroke, marker or style; color alone is not enough' });
     const tiposDeMensaje = resuelta.type === 'sequence' ? [...new Set(resuelta.interaction.messages.map((m) => m.kind))] : [];
     for (const [a, b] of mensajesSoloColor(tema, tiposDeMensaje)) issues.push(aviso(`In View '${declarada.id}', Messages '${a}' and '${b}' differ only by color`));
     if (resuelta.type === 'er' && resuelta.edges.some((e) => e.identifying === true) && aristaIdentificanteSoloColor(tema)) {
@@ -158,7 +158,7 @@ function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefi
     }
     for (const [a, b] of tiposSoloColor(tema, resuelta.type, tipos)) {
       issues.push({
-        code: CODIGOS.W_THEME_COLOR_ONLY,
+        code: CODES.W_THEME_COLOR_ONLY,
         severity: 'warning',
         ...donde,
         message: `In View '${declarada.id}', Node kinds '${a}' and '${b}' differ only by color`,
@@ -173,8 +173,8 @@ function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefi
  * `theme-with-code` por Tema (y por Vista cuyo override anade componentes) y, con `componentes`,
  * la comprobacion de su interfaz. Nunca ejecuta ni lee codigo.
  */
-function avisosDeCodigo(fuente: FuenteCanonica, ubicar: Ubicador | undefined, componentes: OpcionesDeSesion['componentes']): Issue[] {
-  const sitio = (ruta: Parameters<Ubicador>[0]): { file: string; line: number; column: number } | null => {
+function avisosDeCodigo(fuente: CanonicalForm, ubicar: Locator | undefined, componentes: OpcionesDeSesion['componentes']): Issue[] {
+  const sitio = (ruta: Parameters<Locator>[0]): { file: string; line: number; column: number } | null => {
     const donde = ubicar === undefined ? { file: '(canonico)', range: { start: { line: 1, column: 1 } } } : ubicar(ruta);
     return donde === null ? null : { file: donde.file, ...donde.range.start };
   };
@@ -183,7 +183,7 @@ function avisosDeCodigo(fuente: FuenteCanonica, ubicar: Ubicador | undefined, co
     if (usos.length === 0) return;
     const nombres = [...new Set(usos.map((uso) => uso.nombre))];
     issues.push({
-      code: CODIGOS.W_THEME_WITH_CODE,
+      code: CODES.W_THEME_WITH_CODE,
       severity: 'warning',
       ...donde,
       message: `${que} uses code (components: ${nombres.join(', ')}); review it before trusting the Workspace`,
@@ -193,8 +193,8 @@ function avisosDeCodigo(fuente: FuenteCanonica, ubicar: Ubicador | undefined, co
     for (const uso of usos) {
       const interfaz = componentes[uso.nombre];
       if (interfaz === undefined) {
-        const cerca = candidatosCercanos(uso.nombre, Object.keys(componentes));
-        issues.push({ code: CODIGOS.E_THEME_COMPONENT_MISSING, severity: 'error', ...donde, message: `${que}: component '${uso.nombre}' does not exist in the Workspace`, ...(cerca.length > 0 && { hint: `did you mean ${cerca.map((c) => `'${c}'`).join(' or ')}` }) });
+        const cerca = nearestCandidates(uso.nombre, Object.keys(componentes));
+        issues.push({ code: CODES.E_THEME_COMPONENT_MISSING, severity: 'error', ...donde, message: `${que}: component '${uso.nombre}' does not exist in the Workspace`, ...(cerca.length > 0 && { hint: `did you mean ${cerca.map((c) => `'${c}'`).join(' or ')}` }) });
         continue;
       }
       if (interfaz.parametros === undefined) continue;
@@ -202,7 +202,7 @@ function avisosDeCodigo(fuente: FuenteCanonica, ubicar: Ubicador | undefined, co
         const esperado = interfaz.parametros[clave];
         const tipo = typeof valor === 'number' ? 'numero' : 'texto';
         const problema = esperado === undefined ? `does not declare the parameter '${clave}'` : esperado === tipo ? undefined : `expects '${clave}' as ${esperado}, not ${tipo}`;
-        if (problema !== undefined) issues.push({ code: CODIGOS.E_THEME_COMPONENT_PARAMS, severity: 'error', ...donde, message: `${que}: component '${uso.nombre}' ${problema}` });
+        if (problema !== undefined) issues.push({ code: CODES.E_THEME_COMPONENT_PARAMS, severity: 'error', ...donde, message: `${que}: component '${uso.nombre}' ${problema}` });
       }
     }
   };
@@ -222,7 +222,7 @@ function avisosDeCodigo(fuente: FuenteCanonica, ubicar: Ubicador | undefined, co
 }
 
 /** `theme-font-missing` por familia de `fonts` sin archivo, situado en el nombre del Tema; con la familia cercana si la hay. */
-function avisosDeFuentes(fuente: FuenteCanonica, ubicar: Ubicador | undefined, archivos: readonly string[] | undefined): Issue[] {
+function avisosDeFuentes(fuente: CanonicalForm, ubicar: Locator | undefined, archivos: readonly string[] | undefined): Issue[] {
   if (archivos === undefined) return [];
   const disponibles = [...new Set(archivos.flatMap((ruta) => /([^/]+?)(?:-[a-z]+(?:-ext)?-\d{3}-(?:normal|italic))?\.(?:woff2|woff|ttf|otf)$/i.exec(ruta)?.[1]?.toLowerCase() ?? []))];
   const issues: Issue[] = [];
@@ -230,9 +230,9 @@ function avisosDeFuentes(fuente: FuenteCanonica, ubicar: Ubicador | undefined, a
     const donde = ubicar === undefined ? { file: '(canonico)', range: { start: { line: 1, column: 1 } } } : ubicar(['themes', i, 'name']);
     if (donde === null) return;
     for (const { clave, familia } of resolverFuentes(resolverTema(tema).fonts, archivos).faltantes) {
-      const cerca = candidatosCercanos(familia.toLowerCase().replace(/\s+/g, '-'), disponibles);
+      const cerca = nearestCandidates(familia.toLowerCase().replace(/\s+/g, '-'), disponibles);
       issues.push({
-        code: CODIGOS.E_THEME_FONT_MISSING,
+        code: CODES.E_THEME_FONT_MISSING,
         severity: 'error',
         file: donde.file,
         ...donde.range.start,
@@ -247,7 +247,7 @@ function avisosDeFuentes(fuente: FuenteCanonica, ubicar: Ubicador | undefined, a
 interface EntradaDeGeometria {
   /** `layoutKey` mas los Pins de la Vista: lo unico de que depende la geometria. */
   clave: string;
-  resultado: Promise<GeometriaCacheada>;
+  resultado: Promise<CachedGeometry>;
 }
 
 type Memo = ReadonlyMap<string, EntradaDeGeometria>;
@@ -262,7 +262,7 @@ function crear(
   const memo = new Map<string, EntradaDeGeometria>();
   const externos = opciones.issuesDelAdaptador ?? [];
 
-  const claveDe = (vista: string): { clave: string; tema: Tema; resuelta: NonNullable<ReturnType<typeof resolveView>> } | undefined => {
+  const claveDe = (vista: string): { clave: string; tema: Theme; resuelta: NonNullable<ReturnType<typeof resolveView>> } | undefined => {
     if (fuente === undefined) return undefined;
     const declarada = fuente.views.find(({ id }) => id === vista);
     const resuelta = resolveView(fuente, vista);
@@ -271,14 +271,14 @@ function crear(
     return { clave: JSON.stringify([tema.name, claveDeLayout(resuelta, tema)]), tema, resuelta };
   };
 
-  const geometriaConTema = (vista: string, nombre: string): Promise<GeometriaCacheada | undefined> => {
+  const geometriaConTema = (vista: string, nombre: string): Promise<CachedGeometry | undefined> => {
     const resuelta = fuente === undefined ? undefined : resolveView(fuente, vista);
     const tema = fuente?.themes.find(({ name }) => name === nombre);
     if (resuelta === undefined || tema === undefined) return Promise.resolve(undefined);
     return layoutView(resuelta, tema).then((geometry) => ({ view: vista, theme: tema.name, layoutKey: claveDeLayout(resuelta, tema), geometry }));
   };
 
-  const geometria = (vista: string, { tema }: OpcionesDeGeometria = {}): Promise<GeometriaCacheada | undefined> => {
+  const geometria = (vista: string, { tema }: OpcionesDeGeometria = {}): Promise<CachedGeometry | undefined> => {
     if (tema !== undefined) return geometriaConTema(vista, tema);
     const datos = claveDe(vista);
     if (datos === undefined) return Promise.resolve(undefined);

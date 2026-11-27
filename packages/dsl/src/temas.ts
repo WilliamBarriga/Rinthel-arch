@@ -7,8 +7,8 @@
  * de Tipo y de estado se acumulan tras los del padre; `slots` reemplaza la disposicion heredada. Un Tema sin
  * base define su pila en orden. Sin `extends`, parte de fuentes, tokens y Slots del neutro con paleta vacia.
  */
-import { CODIGOS, VALORES_DE_CATALOGO_ANTIGUOS, issueDeRenombre, mensajeDeValorAntiguo, renombreAntiguo } from 'canonico';
-import type { Issue, TextRange } from 'canonico';
+import { CODES, OLD_CATALOG_VALUES, renameIssue, oldValueMessage, oldRename } from 'canonical';
+import type { Issue, TextRange } from 'canonical';
 import type { AstNode as Ast } from 'langium';
 import { ESTADOS, TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, aplicarOps, fuentesSinReserva, opTocaMetricas, parsearEstado } from 'tema';
 import type { CajaDeSlots, CapaDeTema, ElementoDeTema, OpDeCapa, TemaResuelto } from 'tema';
@@ -90,9 +90,9 @@ interface Entorno {
 /** Nombres de las `part` que usa un bloque, incluidas las que usan esas partes. */
 /** El `extends` de un Tema apunta a uno no declarado; un nombre antiguo de Tema incorporado es `old-catalog-value` si el nuevo existe. */
 function temaPadreNoDeclarado(parent: string, archivo: string, ast: Theme, existentes: readonly string[]): Issue {
-  const nuevo = renombreAntiguo(VALORES_DE_CATALOGO_ANTIGUOS, 'theme', parent);
-  if (nuevo !== undefined && existentes.includes(nuevo)) return issueDeRenombre(CODIGOS.E_OLD_CATALOG_VALUE, mensajeDeValorAntiguo('theme', parent, nuevo), archivo, rangoDe(ast, 'parent'), nuevo);
-  return issueConSugerencia({ code: CODIGOS.E_UNKNOWN_THEME, message: `Theme '${parent}' is not declared` }, archivo, ast, 'parent', existentes);
+  const nuevo = oldRename(OLD_CATALOG_VALUES, 'theme', parent);
+  if (nuevo !== undefined && existentes.includes(nuevo)) return renameIssue(CODES.E_OLD_CATALOG_VALUE, oldValueMessage('theme', parent, nuevo), archivo, rangoDe(ast, 'parent'), nuevo);
+  return issueConSugerencia({ code: CODES.E_UNKNOWN_THEME, message: `Theme '${parent}' is not declared` }, archivo, ast, 'parent', existentes);
 }
 
 function partesUsadas(items: ReadonlyArray<{ $type: string }>, partes: ReadonlyMap<string, ParteDeclarada>, vistas = new Set<string>()): string[] {
@@ -126,7 +126,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     const original = porNombre.get(name);
     if (original !== undefined || name === TEMA_ALTO_CONTRASTE.name) {
       issues.push({
-        code: CODIGOS.E_DUPLICATE_THEME,
+        code: CODES.E_DUPLICATE_THEME,
         severity: 'error',
         file: declarado.archivo,
         ...declarado.nombre.start,
@@ -148,7 +148,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       continue;
     }
     issues.push({
-      code: CODIGOS.E_DUPLICATE_PART,
+      code: CODES.E_DUPLICATE_PART,
       severity: 'error',
       file: parte.archivo,
       ...parte.nombre.start,
@@ -176,7 +176,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       if (base === undefined) {
         issues.push(
           padre !== undefined
-            ? { code: CODIGOS.E_EXTENDS_CYCLE, severity: 'error', file: declarado.archivo, ...declarado.padre.start, message: `extends cycle: '${name}' extends '${parent}', which depends on it` }
+            ? { code: CODES.E_EXTENDS_CYCLE, severity: 'error', file: declarado.archivo, ...declarado.padre.start, message: `extends cycle: '${name}' extends '${parent}', which depends on it` }
             : temaPadreNoDeclarado(parent, declarado.archivo, declarado.ast, [...porNombre.keys(), TEMA_ALTO_CONTRASTE.name]),
         );
         enCurso.delete(name);
@@ -242,7 +242,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       if (parte.$type !== 'ThemeFonts') continue;
       for (const entrada of parte.entries.filter((e) => sinReserva.includes(e.key))) {
         issues.push({
-          code: CODIGOS.E_THEME_FONT_NO_FALLBACK,
+          code: CODES.E_THEME_FONT_NO_FALLBACK,
           severity: 'error',
           file: declarado.archivo,
           ...aRango(entrada.$cstNode?.range).start,
@@ -350,7 +350,7 @@ function compilarPadding(item: GroupPadding, archivo: string, issues: Issue[]): 
   const fuera = v.find((n) => n < 0 || n > 128);
   if (lados === undefined || fuera !== undefined) {
     issues.push({
-      code: CODIGOS.E_THEME_INVALID_VALUE,
+      code: CODES.E_THEME_INVALID_VALUE,
       severity: 'error',
       file: archivo,
       ...aRango(item.$cstNode?.range).start,
@@ -398,7 +398,7 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
     if (!tipos.includes(item.name)) {
       issues.push(
         issueConSugerencia(
-          { code: CODIGOS.E_UNKNOWN_NODE_TYPE, message: `Node kind '${item.name}' is not declared in 'specification'` },
+          { code: CODES.E_UNKNOWN_NODE_TYPE, message: `Node kind '${item.name}' is not declared in 'specification'` },
           archivo, item, 'name', tipos,
         ),
       );
@@ -427,7 +427,7 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
     const { estado } = parseado;
     for (const slots of item.items.filter((i): i is ThemeSlots => i.$type === 'ThemeSlots')) {
       issues.push({
-        code: CODIGOS.E_THEME_STATE_TOUCHES_METRICS,
+        code: CODES.E_THEME_STATE_TOUCHES_METRICS,
         severity: 'error',
         file: archivo,
         ...aRango(slots.$cstNode?.range).start,
@@ -468,9 +468,9 @@ function compilarDiagrama(item: ThemeDiagram, elemento: ElementoDeTema, tema: Te
       if (destino.slots !== undefined) parche.slots = destino.slots;
     } else if (hijo.$type === 'GroupPadding') {
       if (elemento === 'grupo') parche.padding = compilarPadding(hijo, archivo, issues) ?? parche.padding;
-      else issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: archivo, ...aRango(hijo.$cstNode?.range).start, message: "'padding' belongs to the Group: put it in 'group { diagram ... }'" });
+      else issues.push({ code: CODES.E_THEME_INVALID_VALUE, severity: 'error', file: archivo, ...aRango(hijo.$cstNode?.range).start, message: "'padding' belongs to the Group: put it in 'group { diagram ... }'" });
     } else if (hijo.$type === 'ThemeMarker' || hijo.$type === 'ThemeLabel') {
-      issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeLabel' ? 'label' : hijo.side}' belongs to the Edge: put it in 'edge { diagram ... }'` });
+      issues.push({ code: CODES.E_THEME_INVALID_VALUE, severity: 'error', file: archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeLabel' ? 'label' : hijo.side}' belongs to the Edge: put it in 'edge { diagram ... }'` });
     }
   }
   bloque.diagramas = {
@@ -484,7 +484,7 @@ function avisarSiTocaMetricas(ops: readonly OpDeCapa[], pilas: ReadonlyArray<rea
   for (const op of ops) {
     const razon = opTocaMetricas(op, pilas);
     if (razon === undefined) continue;
-    issues.push({ code: CODIGOS.E_THEME_STATE_TOUCHES_METRICS, severity: 'error', file: archivo, ...aRango(donde.$cstNode?.range).start, message: `${titulo}: ${razon}; ${consejo}` });
+    issues.push({ code: CODES.E_THEME_STATE_TOUCHES_METRICS, severity: 'error', file: archivo, ...aRango(donde.$cstNode?.range).start, message: `${titulo}: ${razon}; ${consejo}` });
   }
 }
 

@@ -1,11 +1,11 @@
-import type { Intencion, Issue } from 'canonico';
+import type { Intent, Issue } from 'canonical';
 import type { ArchivosDelWorkspace } from 'dsl';
 
 import type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
 import { fijarTema, moverPin, ordenarLifelines } from './gestos';
 import type { ResultadoDeGesto, Visto } from './gestos';
 
-export type { Intencion };
+export type { Intent as Intencion };
 export type { Visto };
 
 export type ResultadoDeIntencion = ResultadoDeGesto;
@@ -14,7 +14,7 @@ export type ResultadoDeIntencion = ResultadoDeGesto;
  * Reductor puro: mapa nuevo o rechazo con `reason`. `visto` rechaza con `stale-hash` si el archivo que
  * cambia difiere; sin `visto` aplica sobre el vigente. No escribe.
  */
-export function aplicarIntencion(archivos: ArchivosDelWorkspace, intencion: Intencion, visto?: Visto): ResultadoDeIntencion {
+export function aplicarIntencion(archivos: ArchivosDelWorkspace, intencion: Intent, visto?: Visto): ResultadoDeIntencion {
   switch (intencion.type) {
     case 'move-pin': {
       const { type: _tipo, ...pin } = intencion;
@@ -50,7 +50,7 @@ export const apilar = (historial: Historial, archivos: ArchivosDelWorkspace): Hi
 /** Aplica una Intencion y la apila; descarta el futuro. Un rechazo no altera el historial. */
 export function editarEnHistorial(
   historial: Historial,
-  intencion: Intencion,
+  intencion: Intent,
 ): ResultadoDeEdicion<{ historial: Historial; ediciones: EdicionConHash[]; issues: Issue[] }> {
   const r = aplicarIntencion(historial.archivos, intencion);
   if (!r.ok) return r;

@@ -1,8 +1,8 @@
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
-import type { FuenteCanonica, Geometria } from 'canonico';
+import { canonicalFormSchema } from 'canonical';
+import type { CanonicalForm, Geometry } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -11,8 +11,8 @@ import { posicionDe } from './ayudas';
 afterEach(cleanup);
 
 const nodo = (id: string) => ({ id, type: 'servicio', title: id, description: '', children: [] });
-const fuente = (overrides: unknown[]): FuenteCanonica =>
-  fuenteCanonicaSchema.parse({
+const fuente = (overrides: unknown[]): CanonicalForm =>
+  canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: { nodes: [nodo('a'), nodo('b')], edges: [] },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], overrides }],
@@ -31,8 +31,8 @@ describe('mover un Pin en el shell', () => {
       pinsSolapados: [],
       width: 300,
       height: 50,
-    } satisfies Geometria));
-    const props = (source: FuenteCanonica) => ({ source, view: 'v', theme: TEMA_NEUTRO, layout, width: 800, height: 600, camera: camara });
+    } satisfies Geometry));
+    const props = (source: CanonicalForm) => ({ source, view: 'v', theme: TEMA_NEUTRO, layout, width: 800, height: 600, camera: camara });
     const { container, rerender } = render(<VistaInteractiva {...props(fuente([]))} />);
     await waitFor(() => expect(posicionDe(container, 'b')).toEqual([200, 0]));
 

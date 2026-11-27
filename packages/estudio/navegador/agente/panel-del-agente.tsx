@@ -6,8 +6,8 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 
-import { etiquetaDeElemento } from 'canonico';
-import type { EventoDeActividad } from 'canonico';
+import { elementLabel } from 'canonical';
+import type { ActivityEvent } from 'canonical';
 
 import { useDiferencias } from '../diferencia/diferencias';
 import { useEstudio } from '../marco/contexto';
@@ -36,7 +36,7 @@ export function PanelDelAgente(): ReactElement {
           <p className="ui-tenue">Removed externally</p>
           <ul aria-label="Removed externally" className="ui-lista">
             {quitados.map((elemento) => {
-              const { tipo, id } = etiquetaDeElemento(elemento);
+              const { kind: tipo, id } = elementLabel(elemento);
               return (
                 <li key={`${tipo}:${id}`}>
                   <span className="ui-tenue">{tipo}</span> <span className="ui-mono">{id}</span>
@@ -59,7 +59,7 @@ export function PanelDelAgente(): ReactElement {
   );
 }
 
-function LineaDelFeed({ evento }: { evento: EventoDeActividad }): ReactElement {
+function LineaDelFeed({ evento }: { evento: ActivityEvent }): ReactElement {
   const { fuente, vista, irAVista, seleccionar } = useEstudio();
   const [abierta, setAbierta] = useState(false);
   const marca = marcaDelEvento(evento);

@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 
-import type { Geometria, Tema, VistaResuelta } from 'canonico';
+import type { Geometry, Theme, ResolvedView } from 'canonical';
 import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout } from 'layout';
 import { tablaDeMetricas, textosAMedir } from 'tema';
 import type { MedidasDeTexto } from 'tema';
@@ -13,15 +13,15 @@ import type { MedidasDeTexto } from 'tema';
 import type { AdaptadorDeLayout, MedidorDeTexto } from './vista-interactiva';
 
 export interface Calculo {
-  vista: VistaResuelta;
-  geometria: Geometria;
+  vista: ResolvedView;
+  geometria: Geometry;
   /** Medidas reales de texto con las que se calculo la Geometria; el dibujo coloca los Slots con ellas. */
   medidas?: MedidasDeTexto;
 }
 
 export interface EntradaDeGeometria {
-  vista: VistaResuelta;
-  theme: Tema;
+  vista: ResolvedView;
+  theme: Theme;
   layout: AdaptadorDeLayout;
   /** Medicion real de texto; si esta, el layout espera las medidas y la clave incluye nivel y hash de fuente. */
   medir?: MedidorDeTexto | undefined;
@@ -70,14 +70,14 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
   const claveTema = claveDeLayout(vista, theme, tabla);
   const claveBase = claveDeEstructura(vista, theme, tabla);
   const mostrado = useRef<Calculo | undefined>(undefined);
-  const cache = useRef<{ llave: AdaptadorDeLayout; mapa: Map<string, Geometria> } | undefined>(undefined);
+  const cache = useRef<{ llave: AdaptadorDeLayout; mapa: Map<string, Geometry> } | undefined>(undefined);
 
   useEffect(() => {
     if (esperando) return;
     if (cache.current === undefined || cache.current.llave !== layout) cache.current = { llave: layout, mapa: new Map() };
     const mapa = cache.current.mapa;
     const clave = claveBase;
-    const mostrar = (geometria: Geometria): void => {
+    const mostrar = (geometria: Geometry): void => {
       const nuevo = { vista, geometria, ...(medidas !== undefined && { medidas }) };
       ultimo.current.alLlegar?.(mostrado.current, nuevo);
       mostrado.current = nuevo;
@@ -85,7 +85,7 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
     };
 
     const tema = ultimo.current.theme;
-    const recibir = (base: Geometria): void => {
+    const recibir = (base: Geometry): void => {
       mapa.delete(clave);
       mapa.set(clave, base);
       if (mapa.size > MAX_CACHE) mapa.delete(mapa.keys().next().value!);
@@ -121,7 +121,7 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
 }
 
 /** La Vista sin Pins: lo que se le pide al adaptador, que solo calcula la parte de ELK. */
-function sinPins(vista: VistaResuelta): VistaResuelta {
+function sinPins(vista: ResolvedView): ResolvedView {
   switch (vista.type) {
     case 'sequence':
       return vista;

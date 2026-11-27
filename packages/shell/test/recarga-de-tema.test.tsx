@@ -1,8 +1,8 @@
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
-import type { Geometria, Tema, VistaResuelta } from 'canonico';
+import { canonicalFormSchema } from 'canonical';
+import type { Geometry, Theme, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -10,7 +10,7 @@ import { TEMA_NEUTRO } from 'tema';
 afterEach(cleanup);
 
 const nodo = (id: string) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children: [] });
-const fuente = fuenteCanonicaSchema.parse({
+const fuente = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'servicio', color: 'blue' }] },
   model: { nodes: [nodo('a'), nodo('b')], edges: [] },
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
@@ -18,10 +18,10 @@ const fuente = fuenteCanonicaSchema.parse({
 
 /** Layout fake que cuenta llamadas y recuerda la Vista y el Tema que recibio. */
 function layoutContador() {
-  const llamadas: { vista: VistaResuelta; tema: Tema }[] = [];
+  const llamadas: { vista: ResolvedView; tema: Theme }[] = [];
   const layout: AdaptadorDeLayout = async (vista, tema) => {
     llamadas.push({ vista, tema });
-    const nodes: Geometria['nodes'] = {};
+    const nodes: Geometry['nodes'] = {};
     vista.nodes.forEach((n, i) => {
       nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
     });
@@ -32,7 +32,7 @@ function layoutContador() {
 
 const montar = (layout: AdaptadorDeLayout) =>
   render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} width={800} height={600} />);
-const conTema = (layout: AdaptadorDeLayout, theme: Tema) => (
+const conTema = (layout: AdaptadorDeLayout, theme: Theme) => (
   <VistaInteractiva source={fuente} view="v" theme={theme} layout={layout} width={800} height={600} />
 );
 

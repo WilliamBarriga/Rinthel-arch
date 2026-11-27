@@ -142,7 +142,7 @@ The emitter is a single point of the CLI (a wrapper of `run` or an injectable de
 - `target`: only what the command names (`inspect view|node|theme`, the View or Node of an `edit` Intent, the `files` that `edit` wrote). The CLI infers nothing.
 - `summary`: from `validate` and `build`. stdout and stderr are not stored.
 
-Short lines written with a single `write` in append mode; the reader drops lines that do not parse. Zod schema `eventoDeActividadSchema` in `canonico`, with its own `contractVersion` and the compatibility rules of `validate`.
+Short lines written with a single `write` in append mode; the reader drops lines that do not parse. Zod schema `activityEventSchema` in `canonical`, with its own `contractVersion` and the compatibility rules of `validate`.
 
 ### Retention
 
@@ -150,7 +150,7 @@ Past 1 MB, the writer rotates to `activity.1.jsonl` (a single previous generatio
 
 ### In `dev` and the UI
 
-`dev` replays the last 50 events at startup and then follows live. It pushes them over SSE as a named event (`event: actividad`), separate from `EstadoDeDev`.
+`dev` replays the last 50 events at startup and then follows live. It pushes them over SSE as a named event (`event: actividad`), separate from `DevState`.
 
 Feed of the Agent panel: one line per event (time, agent or pid, command, clickable target, result mark: ok, errors, warnings or usage failure); the `args` on expand. No filters in the first delivery.
 
@@ -163,4 +163,4 @@ Follow the agent (toggle): `target.view` goes to that View; `target.node` stays 
 ## Amendment: English public contract (spec #226)
 
 - **JSON keys and values in English (#228), one breaking change without aliases**: `validate` 2, `inspect` 2, `edit` 2 and the activity log 2. `inspect`: `comando`/`consulta`/`resultados` are `command`/`query`/`results`, and the node, view, interaction and theme payloads use English keys (`node`, `edges`, `views`, `theme`, `layers`...). `edit` Intents use `type`, `view`, `node`, `order`, `theme`; rejections carry `reason`, `message` and `suggestions`. Activity events carry `agent`, `command`, `durationMs`, `target { view, node, theme, files }` and `summary { errors, warnings }`. New codes and reasons are kebab-case English with no `E_`/`W_` prefix. The env vars are `DIAGRAMS_AGENT` and `DIAGRAMS_ACTIVITY` and the log is `.diagrams/activity.jsonl` (rotated to `activity.1.jsonl`).
-- **Additive, no version bump (review of #226)**: `inspect search` also matches Node and Interaction descriptions (description-only matches sort last). An `edit --edits` entry may carry `rename` (the `fix` of `old-workspace-convention`): the file or folder is renamed in the same all-or-nothing batch as the text edits, its new path is listed in `files`, and an impossible rename rejects the batch with the new reason `invalid-rename`. The warning `unknown-source-kind` is a new code. `scan --json` (contract `SCAN_CONTRACT_VERSION`) has its Zod schema `scanSummarySchema` in `canonico`; draft relations gained `source`.
+- **Additive, no version bump (review of #226)**: `inspect search` also matches Node and Interaction descriptions (description-only matches sort last). An `edit --edits` entry may carry `rename` (the `fix` of `old-workspace-convention`): the file or folder is renamed in the same all-or-nothing batch as the text edits, its new path is listed in `files`, and an impossible rename rejects the batch with the new reason `invalid-rename`. The warning `unknown-source-kind` is a new code. `scan --json` (contract `SCAN_CONTRACT_VERSION`) has its Zod schema `scanSummarySchema` in `canonical`; draft relations gained `source`.

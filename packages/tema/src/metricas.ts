@@ -2,7 +2,7 @@
  * Metricas: espaciado y escala del Tema que `layout` usa para medir y `render` para dibujar. Solo dependen de
  * fuentes, tamano de texto y disposicion de Slots; las Capas de pintura nunca las cambian.
  */
-import type { NodoResuelto, Tema } from 'canonico';
+import type { ResolvedNode, Theme } from 'canonical';
 
 import { definicionDe } from './catalogo';
 import { anchoDeTexto } from './medicion';
@@ -180,7 +180,7 @@ function tamanosDeFila(textos: NonNullable<TemaResuelto['fila']>['textos'] | und
   return salida;
 }
 
-export function tablaDeMetricas(tema: Tema, diagrama: TipoDeDiagrama | undefined, medidas?: MedidasDeTexto): TablaDeMetricas {
+export function tablaDeMetricas(tema: Theme, diagrama: TipoDeDiagrama | undefined, medidas?: MedidasDeTexto): TablaDeMetricas {
   const tabla = tablaSinMarcas(tema, diagrama, medidas);
   if (diagrama === 'sequence') {
     const secuencia = metricasDeSecuencia(resolverTema(tema).secuencia);
@@ -198,7 +198,7 @@ export function tablaDeMetricas(tema: Tema, diagrama: TipoDeDiagrama | undefined
   return { base: conMarcas(tabla.base), tipos: Object.fromEntries(Object.entries(tabla.tipos).map(([tipo, m]) => [tipo, conMarcas(m)])), grupoAbierto: conMarcas(tabla.grupoAbierto), grupoColapsado: conMarcas(tabla.grupoColapsado), etiqueta: conMarcas(tabla.etiqueta) };
 }
 
-function tablaSinMarcas(tema: Tema, diagrama: TipoDeDiagrama | undefined, medidas?: MedidasDeTexto): TablaDeMetricas {
+function tablaSinMarcas(tema: Theme, diagrama: TipoDeDiagrama | undefined, medidas?: MedidasDeTexto): TablaDeMetricas {
   const resuelto = temaParaDiagrama(resolverTema(tema), diagrama);
   const base = entradaDe(resuelto, cascada(resuelto), medidas);
   const claveBase = JSON.stringify(base);
@@ -227,7 +227,7 @@ function entradaDeGrupo(resuelto: TemaResuelto, colapsado: boolean, medidas?: Me
 }
 
 /** Entrada base de la tabla: Nodo sin Tipo. */
-export function metricasDe(tema: Tema, diagrama: TipoDeDiagrama | undefined): Metricas {
+export function metricasDe(tema: Theme, diagrama: TipoDeDiagrama | undefined): Metricas {
   return tablaDeMetricas(tema, diagrama).base;
 }
 
@@ -237,7 +237,7 @@ export function metricasDeNodo(tabla: TablaDeMetricas, tipo?: string): Metricas 
 }
 
 /** Grupo colapsado o Nodo hoja de su Tipo. */
-export function metricasDeHoja(tabla: TablaDeMetricas, nodo: Pick<NodoResuelto, 'type' | 'collapsed'>): Metricas {
+export function metricasDeHoja(tabla: TablaDeMetricas, nodo: Pick<ResolvedNode, 'type' | 'collapsed'>): Metricas {
   return nodo.collapsed ? tabla.grupoColapsado : metricasDeNodo(tabla, nodo.type);
 }
 

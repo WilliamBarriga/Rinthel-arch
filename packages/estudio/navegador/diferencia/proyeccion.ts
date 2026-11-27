@@ -6,8 +6,8 @@
  * El resaltado (`Resaltado`) es un valor: las rafagas se unen y cada elemento tocado reinicia su tiempo; lo quitado
  * dura hasta la siguiente Diferencia externa; el indice se limpia al visitar la Vista; la galeria, al verla.
  */
-import { claveDeElemento, idDeArista, idDeElementoDeSecuencia, padreDe, resolveView, revealAt } from 'canonico';
-import type { EstadoDeColapso, FuenteCanonica, NodoResuelto, VistaResuelta } from 'canonico';
+import { elementKey, edgeId, sequenceElementId, parentOf, resolveView, revealAt } from 'canonical';
+import type { CollapseState, CanonicalForm, ResolvedNode, ResolvedView } from 'canonical';
 
 import type { DiferenciaDeDev, ElementoDeDiferenciaDeDev } from '../../src/protocolo';
 
@@ -15,7 +15,7 @@ export interface ContextoDeProyeccion {
   /** Vista activa. */
   vista: string;
   /** Colapso vigente de la Vista activa (el del hash). */
-  estado?: EstadoDeColapso;
+  estado?: CollapseState;
   /** Paso vigente de la Vista activa; sin el no se mira la visibilidad por Pasos. */
   paso?: number;
 }
@@ -33,9 +33,9 @@ export interface ProyeccionDeDiferencia {
   vistas: string[];
 }
 
-const visibles = (nodos: readonly NodoResuelto[]): Map<string, NodoResuelto> => {
-  const mapa = new Map<string, NodoResuelto>();
-  const recorrer = (lista: readonly NodoResuelto[]): void => {
+const visibles = (nodos: readonly ResolvedNode[]): Map<string, ResolvedNode> => {
+  const mapa = new Map<string, ResolvedNode>();
+  const recorrer = (lista: readonly ResolvedNode[]): void => {
     for (const n of lista) {
       mapa.set(n.id, n);
       recorrer(n.children);
@@ -46,9 +46,9 @@ const visibles = (nodos: readonly NodoResuelto[]): Map<string, NodoResuelto> => 
 };
 
 /** El Nodo tal como se ve en la Vista: el mismo, o el Grupo colapsado que lo contiene; `undefined` si no se ve. */
-function representante(mapa: Map<string, NodoResuelto>, id: string): string | undefined {
+function representante(mapa: Map<string, ResolvedNode>, id: string): string | undefined {
   if (mapa.has(id)) return id;
-  for (let padre = padreDe(id); padre !== ''; padre = padreDe(padre)) {
+  for (let padre = parentOf(id); padre !== ''; padre = parentOf(padre)) {
     const grupo = mapa.get(padre);
     if (grupo !== undefined) return grupo.collapsed ? grupo.id : undefined;
   }
@@ -56,7 +56,7 @@ function representante(mapa: Map<string, NodoResuelto>, id: string): string | un
 }
 
 /** Id del elemento en el lienzo de la Vista resuelta, o `undefined` si no esta en ella. */
-function idEnVista(elemento: ElementoDeDiferenciaDeDev, resuelta: VistaResuelta): string | undefined {
+function idEnVista(elemento: ElementoDeDiferenciaDeDev, resuelta: ResolvedView): string | undefined {
   const mapa = visibles(resuelta.nodes);
   switch (elemento.kind) {
     case 'node':
@@ -71,12 +71,12 @@ function idEnVista(elemento: ElementoDeDiferenciaDeDev, resuelta: VistaResuelta)
       // Sin elevar, el ordinal es el de la Arista entre esos Nodos; elevada a un Grupo colapsado, todas son la misma.
       const elevada = desde !== elemento.from || hasta !== elemento.to;
       const arista = elevada ? delPar[0] : delPar[elemento.ordinal];
-      return arista === undefined ? undefined : idDeArista(arista);
+      return arista === undefined ? undefined : edgeId(arista);
     }
     case 'message': {
       if (resuelta.type !== 'sequence' || resuelta.interaction.id !== elemento.interaction) return undefined;
-      const mensaje = resuelta.interaction.messages.find((m) => m.ruta === elemento.path);
-      return mensaje === undefined ? undefined : idDeElementoDeSecuencia(elemento.interaction, mensaje.ruta);
+      const mensaje = resuelta.interaction.messages.find((m) => m.path === elemento.path);
+      return mensaje === undefined ? undefined : sequenceElementId(elemento.interaction, mensaje.path);
     }
     default:
       return undefined;
@@ -84,7 +84,7 @@ function idEnVista(elemento: ElementoDeDiferenciaDeDev, resuelta: VistaResuelta)
 }
 
 /** Vistas que muestran el elemento sin estar en el lienzo (Interaccion, Vista); `undefined` si se proyecta por id. */
-function vistasSinLienzo(elemento: ElementoDeDiferenciaDeDev, fuente: FuenteCanonica): string[] | undefined {
+function vistasSinLienzo(elemento: ElementoDeDiferenciaDeDev, fuente: CanonicalForm): string[] | undefined {
   if (elemento.kind === 'interaction') return fuente.views.filter((v) => v.type === 'sequence' && v.interaction === elemento.id).map((v) => v.id);
   if (elemento.kind === 'view') return fuente.views.some((v) => v.id === elemento.id) ? [elemento.id] : [];
   if (elemento.kind === 'theme') return [];
@@ -95,16 +95,16 @@ function vistasSinLienzo(elemento: ElementoDeDiferenciaDeDev, fuente: FuenteCano
  * El Tema con el que se dibuja la Vista: el que declara o, sin `theme`, `neutral` (el primero de la Fuente si no esta).
  * La Fuente trae los Temas ya resueltos (cadena `extends` aplanada): un cambio en un padre llega como cambio del hijo.
  */
-const temaEfectivo = (fuente: FuenteCanonica, vista: string): string | undefined => {
+const temaEfectivo = (fuente: CanonicalForm, vista: string): string | undefined => {
   const declarado = fuente.views.find((v) => v.id === vista)?.theme ?? 'neutral';
   return fuente.themes.some((t) => t.name === declarado) ? declarado : fuente.themes[0]?.name;
 };
 
 /** `elementos`: lo agregado y lo cambiado (lo quitado no se proyecta: se lista). */
-export function proyectarDiferencia(elementos: readonly ElementoDeDiferenciaDeDev[], fuente: FuenteCanonica, contexto: ContextoDeProyeccion): ProyeccionDeDiferencia {
+export function proyectarDiferencia(elementos: readonly ElementoDeDiferenciaDeDev[], fuente: CanonicalForm, contexto: ContextoDeProyeccion): ProyeccionDeDiferencia {
   const { vista: activa, estado, paso } = contexto;
-  const resueltas = new Map<string, VistaResuelta | undefined>();
-  const resolver = (vista: string): VistaResuelta | undefined => {
+  const resueltas = new Map<string, ResolvedView | undefined>();
+  const resolver = (vista: string): ResolvedView | undefined => {
     if (!resueltas.has(vista)) resueltas.set(vista, resolveView(fuente, vista, vista === activa ? estado : undefined));
     return resueltas.get(vista);
   };
@@ -163,12 +163,12 @@ export const RESALTADO_VACIO: Resaltado = { lienzo: [], indice: [], temas: [], q
 export const DURACION_DEL_RESALTADO_MS = 5000;
 
 /** Une una Diferencia externa: cada elemento tocado reinicia su tiempo, el indice y la galeria acumulan, lo quitado se reemplaza. */
-export function unirDiferencia(resaltado: Resaltado, diferencia: DiferenciaDeDev, opciones: ContextoDeProyeccion & { fuente: FuenteCanonica; ahora: number; duracionMs: number }): Resaltado {
+export function unirDiferencia(resaltado: Resaltado, diferencia: DiferenciaDeDev, opciones: ContextoDeProyeccion & { fuente: CanonicalForm; ahora: number; duracionMs: number }): Resaltado {
   const { fuente, ahora, duracionMs, ...contexto } = opciones;
   const tocados = tocadosDe(diferencia);
   const p = proyectarDiferencia(tocados, fuente, contexto);
-  const nuevos = new Map(tocados.filter((e) => e.kind !== 'theme' && e.kind !== 'view' && e.kind !== 'interaction').map((e) => [claveDeElemento(e), e]));
-  const sinRenovar = resaltado.lienzo.filter(({ elemento }) => !nuevos.has(claveDeElemento(elemento)));
+  const nuevos = new Map(tocados.filter((e) => e.kind !== 'theme' && e.kind !== 'view' && e.kind !== 'interaction').map((e) => [elementKey(e), e]));
+  const sinRenovar = resaltado.lienzo.filter(({ elemento }) => !nuevos.has(elementKey(elemento)));
   const sinRepetir = (a: readonly string[], b: readonly string[]): string[] => [...new Set([...a, ...b])];
   const { temaDeLaVista: _anterior, ...resto } = resaltado;
   return {

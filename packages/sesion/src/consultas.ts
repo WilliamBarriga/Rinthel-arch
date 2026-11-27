@@ -1,5 +1,5 @@
-import { INSPECT_CONTRACT_VERSION, aplanarMensajes, aristaPlaneada, candidatosCercanos, lifelinesDe, padreDe, planeados, resolveView } from 'canonico';
-import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubicador } from 'canonico';
+import { INSPECT_CONTRACT_VERSION, flattenMessages, plannedEdge, nearestCandidates, lifelinesOf, parentOf, plannedSets, resolveView } from 'canonical';
+import type { Edge, CanonicalForm, Node, SourcePath, InspectOutput, Locator } from 'canonical';
 
 type Sitio = { file: string; line: number };
 
@@ -9,18 +9,18 @@ import type { OpcionesDeConsultaDeTema } from './consulta-de-tema';
 export type Consulta = { comando: 'search' | 'node' | 'view' | 'interaction'; argumento: string } | { comando: 'planned'; argumento?: string } | ({ comando: 'theme'; argumento: string } & OpcionesDeConsultaDeTema);
 
 /** `noEncontrado` es el message (con `Quiza: ...`); `suggestions`, los ids parecidos que nombra. */
-export type Respuesta = { salida: SalidaDeInspect } | { noEncontrado: string; suggestions: string[] };
+export type Respuesta = { salida: InspectOutput } | { noEncontrado: string; suggestions: string[] };
 
 /** En orden de documento. */
-function recorrerNodos(nodos: readonly Nodo[], ruta: RutaDeFuente = ['model', 'nodes']): { nodo: Nodo; ruta: RutaDeFuente }[] {
+function recorrerNodos(nodos: readonly Node[], ruta: SourcePath = ['model', 'nodes']): { nodo: Node; ruta: SourcePath }[] {
   return nodos.flatMap((nodo, i) => {
     const propia = [...ruta, i];
     return [{ nodo, ruta: propia }, ...recorrerNodos(nodo.children, [...propia, 'children'])];
   });
 }
 
-export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, argumento = '' }: Exclude<Consulta, { comando: 'theme' }>): Respuesta {
-  const sitioDe = (ruta: RutaDeFuente): Sitio => {
+export function consultar(fuente: CanonicalForm, ubicar: Locator, { comando, argumento = '' }: Exclude<Consulta, { comando: 'theme' }>): Respuesta {
+  const sitioDe = (ruta: SourcePath): Sitio => {
     const sitio = ubicar(ruta);
     return { file: sitio?.file ?? '(unknown)', line: sitio?.range.start.line ?? 1 };
   };
@@ -28,7 +28,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
   const vistas = fuente.views.map((vista, i) => ({ vista, sitio: sitioDe(['views', i, 'id']) }));
   const interacciones = fuente.model.interactions.map((interaccion, i) => ({ interaccion, sitio: sitioDe(['model', 'interactions', i, 'id']) }));
   const resumen = ({ nodo, sitio }: (typeof nodos)[number]) => ({ id: nodo.id, type: nodo.type, title: nodo.title, ...sitio });
-  const aristaDe = (arista: Arista, i: number, sitioFijo?: Sitio) => ({
+  const aristaDe = (arista: Edge, i: number, sitioFijo?: Sitio) => ({
     from: arista.from.node,
     to: arista.to.node,
     ...(arista.from.attribute === undefined ? {} : { fromAttribute: arista.from.attribute }),
@@ -66,21 +66,21 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
   }
 
   if (comando === 'planned') {
-    const p = planeados(fuente.model);
+    const p = plannedSets(fuente.model);
     return {
       salida: {
         contractVersion: INSPECT_CONTRACT_VERSION,
         command: comando,
         planned: {
           nodes: nodos
-            .filter(({ nodo }) => p.nodos.has(nodo.id))
+            .filter(({ nodo }) => p.nodes.has(nodo.id))
             .map((n) => ({ ...resumen(n), spec: n.nodo.source.filter((s) => s.kind === 'spec').map((s) => s.ref), inherited: n.nodo.planned !== true })),
           attributes: nodos.flatMap(({ nodo, ruta }) =>
             nodo.attributes.flatMap((atributo, i) =>
               atributo.planned === true ? [{ node: nodo.id, name: atributo.name, type: atributo.type, ...sitioDe([...ruta, 'attributes', i, 'planned']) }] : [],
             ),
           ),
-          edges: fuente.model.edges.flatMap((arista, i) => (aristaPlaneada(arista, p) ? [{ ...aristaDe(arista, i), inherited: arista.planned !== true }] : [])),
+          edges: fuente.model.edges.flatMap((arista, i) => (plannedEdge(arista, p) ? [{ ...aristaDe(arista, i), inherited: arista.planned !== true }] : [])),
           interactions: interacciones.filter(({ interaccion }) => interaccion.planned === true).map(({ interaccion, sitio }) => ({ id: interaccion.id, title: interaccion.title, ...sitio })),
         },
       },
@@ -90,11 +90,11 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
   if (comando === 'interaction') {
     const encontrada = interacciones.find(({ interaccion }) => interaccion.id === argumento);
     if (encontrada === undefined) {
-      const cerca = candidatosCercanos(argumento, interacciones.map(({ interaccion }) => interaccion.id));
+      const cerca = nearestCandidates(argumento, interacciones.map(({ interaccion }) => interaccion.id));
       return { noEncontrado: `No such Interaction '${argumento}'${cerca.length === 0 ? '' : `. Did you mean: ${cerca.join(', ')}`}`, suggestions: cerca };
     }
     const { interaccion, sitio } = encontrada;
-    const mensajes = aplanarMensajes(interaccion.items);
+    const mensajes = flattenMessages(interaccion.items);
     return {
       salida: {
         contractVersion: INSPECT_CONTRACT_VERSION,
@@ -106,7 +106,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
           ...sitio,
           items: interaccion.items.length,
           messages: mensajes.length,
-          lifelines: lifelinesDe(mensajes, []),
+          lifelines: lifelinesOf(mensajes, []),
           views: vistas.filter(({ vista }) => vista.type === 'sequence' && vista.interaction === interaccion.id).map(({ vista, sitio: s }) => ({ id: vista.id, ...s })),
         },
       },
@@ -116,11 +116,11 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
   if (comando === 'node') {
     const encontrado = nodos.find(({ nodo }) => nodo.id === argumento);
     if (encontrado === undefined) {
-      const cerca = candidatosCercanos(argumento, nodos.map(({ nodo }) => nodo.id));
+      const cerca = nearestCandidates(argumento, nodos.map(({ nodo }) => nodo.id));
       return { noEncontrado: `No such Node '${argumento}'${cerca.length === 0 ? '' : `. Did you mean: ${cerca.join(', ')}`}`, suggestions: cerca };
     }
     const { nodo } = encontrado;
-    const padre = padreDe(nodo.id);
+    const padre = parentOf(nodo.id);
     const aristas = fuente.model.edges.flatMap((arista, i) => {
       const salen = arista.from.node === nodo.id;
       const entran = arista.to.node === nodo.id;
@@ -152,7 +152,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
   const encontrada = vistas.find(({ vista }) => vista.id === argumento);
   const resuelta = encontrada === undefined ? undefined : resolveView(fuente, argumento);
   if (encontrada === undefined || resuelta === undefined) {
-    const cerca = candidatosCercanos(argumento, vistas.map(({ vista }) => vista.id));
+    const cerca = nearestCandidates(argumento, vistas.map(({ vista }) => vista.id));
     return { noEncontrado: `No such View '${argumento}'${cerca.length === 0 ? '' : `. Did you mean: ${cerca.join(', ')}`}`, suggestions: cerca };
   }
   const visibles = new Set<string>();
@@ -160,7 +160,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
   marcar(resuelta.nodes);
   // Una Arista elevada por un Grupo colapsado se situa en la primera Arista del Modelo que fusiona.
   const dentroDe = (id: string, grupo: string): boolean => id === grupo || id.startsWith(`${grupo}.`);
-  const indiceDeArista = (a: Arista): number => {
+  const indiceDeArista = (a: Edge): number => {
     const exacta = fuente.model.edges.findIndex((e) => e.from.node === a.from.node && e.to.node === a.to.node && e.label === a.label);
     return exacta >= 0 ? exacta : fuente.model.edges.findIndex((e) => dentroDe(e.from.node, a.from.node) && dentroDe(e.to.node, a.to.node));
   };

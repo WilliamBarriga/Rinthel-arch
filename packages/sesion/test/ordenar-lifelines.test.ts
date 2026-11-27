@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveView } from 'canonico';
+import { resolveView } from 'canonical';
 import { abrirSesion, crearHistorial, deshacer, editarEnHistorial, rehacer } from 'sesion';
 
 import { aplicarEnMemoria } from './ayudas';

@@ -1,5 +1,5 @@
 /** Bloques de secuencia de un Tema; lo que admite cada Elemento lo dice `ESPECIFICACION_DE_SECUENCIA` de `tema`. */
-import { CODIGOS } from 'canonico';
+import { CODES } from 'canonical';
 import { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA, ESTADOS, aplicarOps, parsearEstado } from 'tema';
 import type { BloqueDeSecuencia, CapaDeTema, OpDeCapa, Primitiva, TemaResuelto } from 'tema';
 
@@ -28,7 +28,7 @@ export function compilarSecuencia(bloques: readonly ThemeSequence[], tema: TemaR
 function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly SequenceItem[], bloque: Bloque, tema: TemaResuelto, ctx: Contexto): void {
   const espec = ESPECIFICACION_DE_SECUENCIA[nombre];
   const error = (donde: { $cstNode?: { range: Parameters<typeof aRango>[0] } }, message: string): void => {
-    ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(donde.$cstNode?.range).start, message });
+    ctx.issues.push({ code: CODES.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(donde.$cstNode?.range).start, message });
   };
   const capasDe = (hijos: readonly SequenceItem[]) => hijos.filter((item): item is Extract<SequenceItem, { $type: 'ThemeLayer' | 'ThemeUse' }> => item.$type === 'ThemeLayer' || item.$type === 'ThemeUse');
   const marcador = (item: ThemeMarker, destino: Marcadores, enParche: boolean): void => {
@@ -77,7 +77,7 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
         if (!espec.parches.nombres.includes(item.name)) {
           ctx.issues.push(
             issueConSugerencia(
-              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `'${item.name}' is not a variant of '${nombre}'; available: ${espec.parches.nombres.join(', ')}` },
+              { code: CODES.E_THEME_INVALID_VALUE, message: `'${item.name}' is not a variant of '${nombre}'; available: ${espec.parches.nombres.join(', ')}` },
               ctx.archivo, item, 'name', espec.parches.nombres,
             ),
           );
@@ -95,7 +95,7 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
           const disponibles = Object.keys(espec.metricas);
           ctx.issues.push(
             issueConSugerencia(
-              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `'${item.key}' is not a Metric of '${nombre}'${disponibles.length > 0 ? `; available: ${disponibles.join(', ')}` : ''}` },
+              { code: CODES.E_THEME_INVALID_VALUE, message: `'${item.key}' is not a Metric of '${nombre}'${disponibles.length > 0 ? `; available: ${disponibles.join(', ')}` : ''}` },
               ctx.archivo, item, 'key', disponibles,
             ),
           );
@@ -103,7 +103,7 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
         }
         const valor = Number(item.value);
         if (!Number.isFinite(valor) || valor < rango.min || valor > rango.max) {
-          ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...rangoDe(item, 'value').start, message: `'${item.key}' of '${nombre}' ranges from ${rango.min} to ${rango.max}, not ${item.value}` });
+          ctx.issues.push({ code: CODES.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...rangoDe(item, 'value').start, message: `'${item.key}' of '${nombre}' ranges from ${rango.min} to ${rango.max}, not ${item.value}` });
         } else bloque.metricas = { ...bloque.metricas, [item.key]: valor };
         break;
       }
@@ -113,7 +113,7 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
           const disponibles = Object.keys(espec.textos);
           ctx.issues.push(
             issueConSugerencia(
-              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `'${item.slot}' is not a style of '${nombre}'${disponibles.length > 0 ? `; available: ${disponibles.join(', ')}` : ''}` },
+              { code: CODES.E_THEME_INVALID_VALUE, message: `'${item.slot}' is not a style of '${nombre}'${disponibles.length > 0 ? `; available: ${disponibles.join(', ')}` : ''}` },
               ctx.archivo, item, 'slot', disponibles,
             ),
           );

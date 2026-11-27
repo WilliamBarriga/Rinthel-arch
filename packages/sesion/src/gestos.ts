@@ -1,6 +1,6 @@
 /** Gestos: cada Intencion se reduce a que ubicar y que texto escribir. Interno: se entra por `aplicarIntencion`. */
-import { candidatosCercanos } from 'canonico';
-import type { FuenteCanonica, IntencionDeOrden, IntencionDePin, IntencionDeTema, Issue, TextRange, Ubicador } from 'canonico';
+import { nearestCandidates } from 'canonical';
+import type { CanonicalForm, OrderIntent, PinIntent, ThemeIntent, Issue, TextRange, Locator } from 'canonical';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace } from 'dsl';
 
@@ -13,7 +13,7 @@ export type ResultadoDeGesto = ResultadoDeEdicion<{
   issues: Issue[];
 }>;
 
-/** Archivo -> `hashDeContenido` del texto que vio quien emite la Intencion. Un archivo sin entrada se aplica sobre el vigente. */
+/** Archivo -> `contentHash` del texto que vio quien emite la Intencion. Un archivo sin entrada se aplica sobre el vigente. */
 export type Visto = Readonly<Record<string, string>>;
 
 type Rechazo = Extract<ResultadoDeGesto, { ok: false }>;
@@ -26,10 +26,10 @@ type Rechazo = Extract<ResultadoDeGesto, { ok: false }>;
 type Escritura = { file: string } & ({ reemplazar: TextRange; por: string } | { en: TextRange; insertar: string } | { tras: TextRange; insertar: string });
 
 interface Contexto {
-  fuente: FuenteCanonica;
-  declarada: FuenteCanonica['views'][number];
+  fuente: CanonicalForm;
+  declarada: CanonicalForm['views'][number];
   indice: number;
-  ubicar: Ubicador;
+  ubicar: Locator;
   texto: (file: string) => string;
 }
 
@@ -94,7 +94,7 @@ const coordenadaDePin = (n: number): number => Math.min(LIMITE_DE_PIN, Math.max(
  * Reemplaza el `pin` del override del Nodo, lo agrega a un override sin `pin`, o inserta `node <id> { pin x,y }`
  * antes de la `}` de la Vista. Un Nodo inexistente rechaza con `invalid`.
  */
-export function moverPin(archivos: ArchivosDelWorkspace, intencion: IntencionDePin, visto?: Visto): ResultadoDeGesto {
+export function moverPin(archivos: ArchivosDelWorkspace, intencion: PinIntent, visto?: Visto): ResultadoDeGesto {
   const { node: nodo } = intencion;
   const pin = `pin ${coordenadaDePin(intencion.x)},${coordenadaDePin(intencion.y)}`;
   return gesto(archivos, intencion.view, visto, ({ declarada, indice, ubicar, texto }) => {
@@ -128,7 +128,7 @@ function ordenConOcultas(orden: readonly string[], viejo: readonly string[]): st
  * Reescribe el `order` completo de una Vista de secuencia (las entradas ocultas conservan su posicion relativa)
  * o lo inserta antes de la `}` de la Vista, aunque coincida con la primera aparicion. Un id que no es Nodo rechaza con `invalid`.
  */
-export function ordenarLifelines(archivos: ArchivosDelWorkspace, intencion: IntencionDeOrden, visto?: Visto): ResultadoDeGesto {
+export function ordenarLifelines(archivos: ArchivosDelWorkspace, intencion: OrderIntent, visto?: Visto): ResultadoDeGesto {
   const { view: vista } = intencion;
   return gesto(archivos, vista, visto, ({ declarada, indice, ubicar }) => {
     if (declarada.type !== 'sequence') return rechazo('invalid', `View '${vista}' is not a sequence View`);
@@ -161,11 +161,11 @@ function lineaDe(texto: string, sentencia: TextRange): TextRange {
  * linea del cuerpo. Sin `tema` quita la sentencia, o la deja en `theme neutral { parche }` si tenia parche. Un Tema
  * que la Fuente no declara rechaza con `unknown-theme`.
  */
-export function fijarTema(archivos: ArchivosDelWorkspace, intencion: IntencionDeTema, visto?: Visto): ResultadoDeGesto {
+export function fijarTema(archivos: ArchivosDelWorkspace, intencion: ThemeIntent, visto?: Visto): ResultadoDeGesto {
   const { view: vista, theme: tema } = intencion;
   return gesto(archivos, vista, visto, ({ declarada, indice, ubicar, texto, fuente }) => {
     if (tema !== undefined && !fuente.themes.some(({ name }) => name === tema)) {
-      const cerca = candidatosCercanos(tema, fuente.themes.map(({ name }) => name));
+      const cerca = nearestCandidates(tema, fuente.themes.map(({ name }) => name));
       return rechazo('unknown-theme', `No such Theme '${tema}'${cerca.length === 0 ? '' : `. Did you mean: ${cerca.join(', ')}`}`);
     }
     if (declarada.theme === undefined) {

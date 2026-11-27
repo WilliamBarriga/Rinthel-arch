@@ -8,7 +8,7 @@
  * Sin watcher ni debounce: `editarFuera` recompila en el acto y el Registro de actividad avisa sin espera.
  * Errores: nunca lanza por una peticion; responde el estado HTTP que daria `dev`.
  */
-import { RUTAS_DE_DEV } from 'canonico';
+import { DEV_ROUTES } from 'canonical';
 import { abrirWorkspaceVivo, fetchSobreApiDeDev, puertoEnMemoria } from 'sesion';
 import type { Reloj, WorkspaceEnMemoria } from 'sesion';
 
@@ -64,7 +64,7 @@ export async function devEnMemoria({ codigo, ahora = Date.now, ...contenido }: C
   });
 
   const oyentes = new Set<(nombre: string, datos: string) => void>();
-  const dejarDeEscuchar = vivo.escuchar(({ nombre, datos }) => {
+  const dejarDeEscuchar = vivo.escuchar(({ name: nombre, data: datos }) => {
     const texto = JSON.stringify(datos);
     for (const oyente of [...oyentes]) oyente(nombre, texto);
   });
@@ -84,11 +84,11 @@ export async function devEnMemoria({ codigo, ahora = Date.now, ...contenido }: C
       return init?.method === 'POST' ? seguir(p) : p;
     }) as typeof fetch,
     eventos(url, alEvento) {
-      if (url !== RUTAS_DE_DEV.eventos) return () => undefined;
+      if (url !== DEV_ROUTES.events) return () => undefined;
       oyentes.add(alEvento);
       queueMicrotask(() => {
         if (!oyentes.has(alEvento)) return;
-        for (const { nombre, datos } of vivo.conexion()) alEvento(nombre, JSON.stringify(datos));
+        for (const { name: nombre, data: datos } of vivo.conexion()) alEvento(nombre, JSON.stringify(datos));
       });
       return () => oyentes.delete(alEvento);
     },

@@ -1,5 +1,5 @@
 /** Componentes de Tema que nombran las Capas `code`, recorriendo la cascada completa (base, Tipos, estados y combinaciones). */
-import type { Tema } from 'canonico';
+import type { Theme } from 'canonical';
 
 import { cascada, ESTADOS } from './parches';
 import type { Estado, OpDeCapa } from './parches';
@@ -12,7 +12,7 @@ export interface UsoDeComponente {
 }
 
 /** Usos de `code` del Tema, sin repetidos, ordenados por nombre y parametros. `vista` son los parches de una Vista. */
-export function usosDeCodigo(tema: Tema, vista?: readonly OpDeCapa[]): UsoDeComponente[] {
+export function usosDeCodigo(tema: Theme, vista?: readonly OpDeCapa[]): UsoDeComponente[] {
   const resuelto = resolverTema(tema);
   const usos = new Map<string, UsoDeComponente>();
   for (const elemento of ['nodo', 'grupo'] as const) {
@@ -35,4 +35,4 @@ export function usosDeCodigo(tema: Tema, vista?: readonly OpDeCapa[]): UsoDeComp
   return [...usos.values()].sort((a, b) => a.nombre.localeCompare(b.nombre) || JSON.stringify(a.parametros).localeCompare(JSON.stringify(b.parametros)));
 }
 
-export const componentesDeTema = (tema: Tema, vista?: readonly OpDeCapa[]): string[] => [...new Set(usosDeCodigo(tema, vista).map((uso) => uso.nombre))].sort();
+export const componentesDeTema = (tema: Theme, vista?: readonly OpDeCapa[]): string[] => [...new Set(usosDeCodigo(tema, vista).map((uso) => uso.nombre))].sort();

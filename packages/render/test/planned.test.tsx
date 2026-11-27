@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, idDeArista, idDeElementoDeSecuencia, resolveView } from 'canonico';
-import type { VistaDeGrafo, VistaDeSecuencia, VistaResuelta } from 'canonico';
+import { canonicalFormSchema, edgeId, sequenceElementId, resolveView } from 'canonical';
+import type { GraphView, SequenceView, ResolvedView } from 'canonical';
 import { layoutView } from 'layout';
 import type { DiagramProps } from 'render';
 import { TEMA_NEUTRO } from 'tema';
@@ -12,7 +12,7 @@ import { aHtml, etiquetaCon, hojaDe } from './ayudas';
 const nodo = (id: string, extra: Record<string, unknown> = {}) => ({ id, type: 'service', title: id.toUpperCase(), description: '', children: [], ...extra });
 
 /** `real -> plan` (planned by its end), `real -> other`; `plan` is planned; `t#coupon` a planned Attribute. */
-const FUENTE = fuenteCanonicaSchema.parse({
+const FUENTE = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'service' }] },
   model: {
     nodes: [
@@ -44,7 +44,7 @@ const FUENTE = fuenteCanonicaSchema.parse({
 });
 
 async function dibujar(id: string, extra: Partial<DiagramProps> = {}): Promise<string> {
-  const view = resolveView(FUENTE, id) as VistaResuelta;
+  const view = resolveView(FUENTE, id) as ResolvedView;
   const theme = (extra.theme as TemaResuelto | undefined) ?? TEMA_NEUTRO;
   return aHtml({ view, geometry: await layoutView(view, theme), theme, width: 800, height: 600, ...extra });
 }
@@ -66,7 +66,7 @@ describe('planned elements on the canvas', () => {
   });
 
   it('never changes Metrics: the planned Node keeps the size it would have if real', async () => {
-    const view = resolveView(FUENTE, 'arch') as VistaDeGrafo;
+    const view = resolveView(FUENTE, 'arch') as GraphView;
     const real = await layoutView({ ...view, nodes: view.nodes.map(({ planned: _p, ...n }) => n) }, TEMA_NEUTRO);
     const planeada = await layoutView(view, TEMA_NEUTRO);
     expect(planeada).toEqual(real);
@@ -74,8 +74,8 @@ describe('planned elements on the canvas', () => {
 
   it('an Edge touching a planned Node is drawn planned with a dashed line', async () => {
     const html = await dibujar('arch');
-    const view = resolveView(FUENTE, 'arch') as VistaDeGrafo;
-    const [haciaPlan, haciaOtro] = view.edges.map((arista) => idDeArista(arista).replaceAll('>', '&gt;'));
+    const view = resolveView(FUENTE, 'arch') as GraphView;
+    const [haciaPlan, haciaOtro] = view.edges.map((arista) => edgeId(arista).replaceAll('>', '&gt;'));
 
     expect(etiquetaCon(html, `data-edge="${haciaPlan}"`)).toContain('data-planeado=""');
     expect(etiquetaCon(html, `data-edge="${haciaOtro}"`)).not.toContain('data-planeado');
@@ -84,8 +84,8 @@ describe('planned elements on the canvas', () => {
 
   it('a Message to a planned Lifeline is drawn planned (sequence)', async () => {
     const html = await dibujar('seq');
-    const view = resolveView(FUENTE, 'seq') as VistaDeSecuencia;
-    const [aOtro, aPlan] = view.interaction.messages.map((m) => idDeElementoDeSecuencia('flow', m.ruta));
+    const view = resolveView(FUENTE, 'seq') as SequenceView;
+    const [aOtro, aPlan] = view.interaction.messages.map((m) => sequenceElementId('flow', m.path));
 
     expect(etiquetaCon(html, `data-message="${aPlan}"`)).toContain('data-planeado=""');
     expect(etiquetaCon(html, `data-message="${aOtro}"`)).not.toContain('data-planeado');
@@ -134,8 +134,8 @@ describe('a Theme restyles planned Edges and Messages (paint-only)', () => {
 
   it('a planned Edge takes the Theme stack of its planned patch, without the default dashed look', async () => {
     const html = await dibujar('arch', { theme: conPlanned });
-    const view = resolveView(FUENTE, 'arch') as VistaDeGrafo;
-    const [haciaPlan, haciaOtro] = view.edges.map((arista) => idDeArista(arista).replaceAll('>', '&gt;'));
+    const view = resolveView(FUENTE, 'arch') as GraphView;
+    const [haciaPlan, haciaOtro] = view.edges.map((arista) => edgeId(arista).replaceAll('>', '&gt;'));
     const trazo = (id: string): string => html.slice(html.indexOf(`data-edge="${id}"`), html.indexOf('</g>', html.indexOf(`data-edge="${id}"`)));
 
     expect(etiquetaCon(html, `data-edge="${haciaPlan}"`)).not.toContain('data-planeado');
@@ -146,8 +146,8 @@ describe('a Theme restyles planned Edges and Messages (paint-only)', () => {
 
   it('without a message block, a planned Message takes the Edge planned patch (sequence)', async () => {
     const html = await dibujar('seq', { theme: conPlanned });
-    const view = resolveView(FUENTE, 'seq') as VistaDeSecuencia;
-    const [aOtro, aPlan] = view.interaction.messages.map((m) => idDeElementoDeSecuencia('flow', m.ruta));
+    const view = resolveView(FUENTE, 'seq') as SequenceView;
+    const [aOtro, aPlan] = view.interaction.messages.map((m) => sequenceElementId('flow', m.path));
     const trazo = (id: string): string => html.slice(html.indexOf(`data-message="${id}"`), html.indexOf('</g>', html.indexOf(`data-message="${id}"`)));
 
     expect(etiquetaCon(html, `data-message="${aPlan}"`)).not.toContain('data-planeado');
@@ -156,7 +156,7 @@ describe('a Theme restyles planned Edges and Messages (paint-only)', () => {
   });
 
   it('never changes the layout: Metrics are the same with or without the patch', async () => {
-    const view = resolveView(FUENTE, 'arch') as VistaDeGrafo;
+    const view = resolveView(FUENTE, 'arch') as GraphView;
     expect(await layoutView(view, conPlanned)).toEqual(await layoutView(view, { ...conPlanned, arista: { ...conPlanned.arista, estados: {} } }));
   });
 });

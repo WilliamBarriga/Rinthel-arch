@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
-import type { Geometria, VistaResuelta } from 'canonico';
+import { canonicalFormSchema } from 'canonical';
+import type { Geometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, VistaInteractivaProps } from 'shell';
 import { pulsarNodo } from './ayudas';
@@ -13,7 +13,7 @@ afterEach(cleanup);
 const nodo = (id: string) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children: [] });
 
 // Vista 'a' enlaza el Nodo x a 'b'; 'b' enlaza y a 'a' (ciclo) y z a 'c'.
-const fuente = fuenteCanonicaSchema.parse({
+const fuente = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'servicio' }] },
   model: { nodes: [nodo('x'), nodo('y'), nodo('z')], edges: [] },
   views: [
@@ -32,8 +32,8 @@ const fuente = fuenteCanonicaSchema.parse({
   ],
 });
 
-const enFila: AdaptadorDeLayout = async (vista: VistaResuelta) => {
-  const nodes: Geometria['nodes'] = {};
+const enFila: AdaptadorDeLayout = async (vista: ResolvedView) => {
+  const nodes: Geometry['nodes'] = {};
   vista.nodes.forEach((n, i) => {
     nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
   });
@@ -125,7 +125,7 @@ describe('link, breadcrumbs y atras', () => {
 describe('Geometria cacheada por Vista al navegar', () => {
   it('usa la Geometria que llego para la Vista activa y calcula en el adaptador (el Worker) la que no llego', async () => {
     const layout = vi.fn(enFila);
-    const cacheada: Geometria = { kind: 'grafo', nodes: { x: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, pinsSolapados: [], width: 100, height: 50 };
+    const cacheada: Geometry = { kind: 'grafo', nodes: { x: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, pinsSolapados: [], width: 100, height: 50 };
     const { container } = montar({ defaultView: 'a', layout, cachedGeometries: { a: cacheada } });
     await dibujado(container, 'x');
     expect(layout).not.toHaveBeenCalled();

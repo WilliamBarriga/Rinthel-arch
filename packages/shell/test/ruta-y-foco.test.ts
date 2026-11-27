@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView } from 'canonico';
+import { canonicalFormSchema, resolveView } from 'canonical';
 
 import { estadosDeRuta, moverFoco, ordenDeFoco, rutaMasCorta, unirEstados } from '../src/ruta-y-foco';
 
@@ -9,7 +9,7 @@ const arista = (from: string, to: string) => ({ from: { node: from }, to: { node
 
 /** g { g.x } ; a -> b -> c ; a -> d ; e (aislado) */
 const vista = resolveView(
-  fuenteCanonicaSchema.parse({
+  canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: {
       nodes: [nodo('g', [nodo('g.x')]), nodo('a'), nodo('b'), nodo('c'), nodo('d'), nodo('e')],

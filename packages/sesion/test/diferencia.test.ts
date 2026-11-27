@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { abrirSesion, diferenciar } from 'sesion';
-import type { FuenteCanonica } from 'canonico';
+import type { CanonicalForm } from 'canonical';
 
 const BASE = `specification {
   node servicio
@@ -31,7 +31,7 @@ theme claro extends neutral {
 }
 `;
 
-const fuenteDe = (texto: string): FuenteCanonica => {
+const fuenteDe = (texto: string): CanonicalForm => {
   const fuente = abrirSesion({ 'main.dg': texto }).fuente;
   if (fuente === undefined) throw new Error('el DSL de prueba no compila');
   return fuente;

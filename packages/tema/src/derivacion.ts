@@ -1,6 +1,6 @@
 /** Derivacion de los Elementos de Tema de secuencia y ER que el Tema no declara, desde la pintura resuelta de `node` y `edge`. */
-import { TIPOS_DE_MENSAJE } from 'canonico';
-import type { TipoDeMensaje } from 'canonico';
+import { MESSAGE_KINDS } from 'canonical';
+import type { MessageKind } from 'canonical';
 
 import { primitivasDeFamilia } from './catalogo';
 import type { NombreDePrimitiva } from './catalogo';
@@ -33,7 +33,7 @@ const COLOR_DE_NOTA = 'amber';
 /** Reserva de un marcador sin color ni trazo del que tomarlo. */
 const NEGRO = '#000000';
 
-const MARCADOR_DE_MENSAJE: Record<TipoDeMensaje, NombreDePrimitiva> = { sync: 'arrow', async: 'chevron', reply: 'chevron', create: 'chevron', destroy: 'arrow' };
+const MARCADOR_DE_MENSAJE: Record<MessageKind, NombreDePrimitiva> = { sync: 'arrow', async: 'chevron', reply: 'chevron', create: 'chevron', destroy: 'arrow' };
 
 const FAMILIAS_DE_CAJA: readonly string[] = [...primitivasDeFamilia('forma'), ...primitivasDeFamilia('relleno'), ...primitivasDeFamilia('borde')];
 const FAMILIAS_DE_RELLENO: readonly string[] = primitivasDeFamilia('relleno');
@@ -60,7 +60,7 @@ export function lifeline(declarada: PinturaDeTrazoDeSecuencia | undefined, arist
 const estiloDeTrazo = (capas: readonly CapaPintada[]): string => String(capas.at(-1)?.props['style'] ?? 'solid');
 
 /** Continuidad opuesta en `reply` y `create`, y el marcador del tipo, sin marcador de origen. */
-function mensajeDerivado(capasBase: readonly CapaPintada[], finBase: PrimitivaPintada | undefined, kind: TipoDeMensaje): TrazoDeVariante {
+function mensajeDerivado(capasBase: readonly CapaPintada[], finBase: PrimitivaPintada | undefined, kind: MessageKind): TrazoDeVariante {
   const continuo = estiloDeTrazo(capasBase) === 'solid';
   const estilo = kind === 'reply' || kind === 'create' ? (continuo ? 'dashed' : 'solid') : undefined;
   const capas = estilo === undefined ? [...capasBase] : capasBase.map((capa) => ({ ...capa, props: { ...capa.props, style: estilo } }));
@@ -69,7 +69,7 @@ function mensajeDerivado(capasBase: readonly CapaPintada[], finBase: PrimitivaPi
 
 /** Por tipo de Mensaje, el parche `kind` o la derivacion; sin bloque `message` parte de la Arista, con bloque, de su trazo y `end`. */
 export function mensaje(declarado: PinturaDeTrazoDeSecuencia | undefined, arista: PinturaDeArista): PinturaDeTrazoDeSecuencia {
-  const tipoDe = (kind: TipoDeMensaje): TrazoDeVariante => {
+  const tipoDe = (kind: MessageKind): TrazoDeVariante => {
     if (declarado === undefined) return mensajeDerivado(arista.capas, arista.fin, kind);
     const parche = declarado.variantes[kind];
     if (parche !== undefined) {
@@ -81,7 +81,7 @@ export function mensaje(declarado: PinturaDeTrazoDeSecuencia | undefined, arista
     return declarado.fin === undefined ? derivado : { ...derivado, fin: declarado.fin };
   };
   // Declared states: the `message` block's, or (without the block) the Edge's, derived per kind like the base stack.
-  const estadoDe = (kind: TipoDeMensaje): TrazoDeVariante['estados'] => {
+  const estadoDe = (kind: MessageKind): TrazoDeVariante['estados'] => {
     if (declarado !== undefined) {
       const propios = Object.entries(declarado.estadosDeTrazo ?? {});
       return propios.length === 0 ? undefined : Object.fromEntries(propios.map(([estado, e]) => [estado, declarado.variantes[kind] !== undefined ? (e.variantes[kind] ?? e.capas) : mensajeDerivado(e.capas, undefined, kind).capas]));
@@ -90,7 +90,7 @@ export function mensaje(declarado: PinturaDeTrazoDeSecuencia | undefined, arista
     return deArista.length === 0 ? undefined : Object.fromEntries(deArista.map(([estado, e]) => [estado, mensajeDerivado(e.capas, arista.fin, kind).capas]));
   };
   const tipos = Object.fromEntries(
-    TIPOS_DE_MENSAJE.map((kind) => {
+    MESSAGE_KINDS.map((kind) => {
       const estados = estadoDe(kind);
       return [kind, { ...tipoDe(kind), ...(estados !== undefined && { estados }) }];
     }),

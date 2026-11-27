@@ -13,7 +13,7 @@ Interactive React layer over `render`: pan/zoom, Selection, navigation between V
 - Does not define the CLI nor serve files: that is `cli`.
 
 ## Depends on
-`canonico`, `tema`, `layout`, `sesion` and `render`. External dependencies: `d3-selection`, `d3-zoom`; `react` is a peer.
+`canonical`, `tema`, `layout`, `sesion` and `render`. External dependencies: `d3-selection`, `d3-zoom`; `react` is a peer.
 
 ## Entry file
 `packages/shell/src/index.ts` (the header documents the public interface and the props).

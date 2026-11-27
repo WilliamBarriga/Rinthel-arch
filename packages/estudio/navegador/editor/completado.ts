@@ -4,13 +4,13 @@
  * (Vista), `function` (Interaccion) y `type` (Tema).
  */
 import type { Completion, CompletionContext, CompletionResult, CompletionSource } from '@codemirror/autocomplete';
-import type { FuenteCanonica } from 'canonico';
+import type { CanonicalForm } from 'canonical';
 
 import { PALABRAS_CLAVE } from './palabras-clave';
 
 const PALABRAS: readonly Completion[] = PALABRAS_CLAVE.map((label) => ({ label, type: 'keyword' }));
 
-export function opcionesDeCompletado(fuente: FuenteCanonica | undefined): Completion[] {
+export function opcionesDeCompletado(fuente: CanonicalForm | undefined): Completion[] {
   if (fuente === undefined) return [...PALABRAS];
   const de = (ids: readonly string[], type: string, detail: string): Completion[] => ids.map((label) => ({ label, type, detail }));
   return [
@@ -47,7 +47,7 @@ export function opcionesDeCompletado(fuente: FuenteCanonica | undefined): Comple
 const PALABRA = /[\w.-]+/;
 
 /** `fuente` se lee en cada consulta: siempre la ultima buena. */
-export function completarDsl(fuente: () => FuenteCanonica | undefined): CompletionSource {
+export function completarDsl(fuente: () => CanonicalForm | undefined): CompletionSource {
   return (contexto: CompletionContext): CompletionResult | null => {
     const palabra = contexto.matchBefore(PALABRA);
     if (palabra === null && !contexto.explicit) return null;

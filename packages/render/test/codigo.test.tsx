@@ -2,8 +2,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView } from 'canonico';
-import type { VistaResuelta } from 'canonico';
+import { canonicalFormSchema, resolveView } from 'canonical';
+import type { ResolvedView } from 'canonical';
 import { layoutView } from 'layout';
 import { Diagram } from 'render';
 import type { ComponenteDeTema, DiagramProps, PropsDeCodigo } from 'render';
@@ -13,9 +13,9 @@ import type { TemaResuelto } from 'tema';
 import { etiquetaCon, propiedad } from './ayudas';
 
 const nodo = (id: string) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children: [] });
-const vista = (): VistaResuelta =>
+const vista = (): ResolvedView =>
   resolveView(
-    fuenteCanonicaSchema.parse({
+    canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio', color: 'blue' }] },
       model: { nodes: [nodo('a'), nodo('b')], edges: [{ from: { node: 'a' }, to: { node: 'b' } }] },
       views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],

@@ -6,7 +6,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
-import type { FuenteCanonica } from 'canonico';
+import type { CanonicalForm } from 'canonical';
 import type { PropsDeEstadoEnHash } from 'shell';
 
 import type { EstadoDeDev } from '../../src/protocolo';
@@ -69,7 +69,7 @@ interface ChromeDelMarco {
 
 interface PropsDeProveedores extends BaseDelEstudio {
   /** Sin Fuente (el Workspace nunca compilo) no hay Vista ni Seleccion. */
-  fuente?: FuenteCanonica;
+  fuente?: CanonicalForm;
   /** La Vista activa, la Seleccion y la ruta, que viven en el hash. */
   hashProps?: PropsDeEstadoEnHash;
   /** El marco (con el lienzo, si hay Fuente). */

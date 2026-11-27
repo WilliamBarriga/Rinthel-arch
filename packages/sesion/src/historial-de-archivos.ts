@@ -3,11 +3,11 @@
  * texto antes y despues de cada archivo que cambio. Deshacer o rehacer escribe solo esos archivos y se rechaza con
  * `stale-hash` si alguno cambio por fuera (la regla de `visto`); una escritura externa en otro archivo no lo
  * invalida ni lo reinicia. Puro e inmutable: quien lo usa escribe `escritos` en el disco.
- * Saltar (#193): `saltar` lleva el disco a cualquier entrada (o a `INICIO_DEL_HISTORIAL_DE_DEV`) componiendo deshacer o rehacer
+ * Saltar (#193): `saltar` lleva el disco a cualquier entrada (o a `DEV_HISTORY_START`) componiendo deshacer o rehacer
  * con la misma regla de rechazo; no apila y conserva el futuro. Cada entrada lleva un `id` creciente que no se reutiliza.
  */
-import { INICIO_DEL_HISTORIAL_DE_DEV } from 'canonico';
-import type { EntradaDelHistorialDeDev, HistorialDeDev, Intencion } from 'canonico';
+import { DEV_HISTORY_START } from 'canonical';
+import type { DevHistoryEntry, DevHistory, Intent } from 'canonical';
 import type { ArchivosDelWorkspace } from 'dsl';
 
 /** `undefined`: el archivo no existia (antes) o se borro (despues). */
@@ -42,7 +42,7 @@ export type ResultadoDeRestaurar =
   | { ok: false; reason: 'nothing-to-undo' | 'nothing-to-redo' | 'stale-hash' | 'unknown-entry'; message: string; file?: string };
 
 /** Descripcion de la entrada de una Intencion. */
-export function descripcionDeIntencion(intencion: Intencion): string {
+export function descripcionDeIntencion(intencion: Intent): string {
   switch (intencion.type) {
     case 'move-pin':
       return `move ${intencion.node} in ${intencion.view}`;
@@ -101,12 +101,12 @@ export function rehacerSobre(historial: HistorialDeArchivos, disco: ArchivosDelW
 
 /**
  * Lleva el disco a la entrada `id`: del pasado, al estado justo despues de ella; del futuro, rehaciendo hasta ella;
- * `INICIO_DEL_HISTORIAL_DE_DEV`, al texto previo a la primera. `escritos` son solo los archivos que difieren del disco.
+ * `DEV_HISTORY_START`, al texto previo a la primera. `escritos` son solo los archivos que difieren del disco.
  */
 export function saltar(historial: HistorialDeArchivos, disco: ArchivosDelWorkspace, id: number): ResultadoDeRestaurar {
-  const haciaAtras = id === INICIO_DEL_HISTORIAL_DE_DEV || historial.pasado.some((e) => e.id === id);
+  const haciaAtras = id === DEV_HISTORY_START || historial.pasado.some((e) => e.id === id);
   if (!haciaAtras && !historial.futuro.some((e) => e.id === id)) return { ok: false, reason: 'unknown-entry', message: `There is no entry ${id} in the History` };
-  const llego = (h: HistorialDeArchivos): boolean => (id === INICIO_DEL_HISTORIAL_DE_DEV ? h.pasado.length === 0 : h.pasado[h.pasado.length - 1]?.id === id);
+  const llego = (h: HistorialDeArchivos): boolean => (id === DEV_HISTORY_START ? h.pasado.length === 0 : h.pasado[h.pasado.length - 1]?.id === id);
   let h = historial;
   let archivos = disco;
   while (!llego(h)) {
@@ -119,14 +119,14 @@ export function saltar(historial: HistorialDeArchivos, disco: ArchivosDelWorkspa
 }
 
 /**
- * El Historial tal como lo ve la UI (`HistorialDeDev` de `canonico`): cada destino es alcanzable si `saltar` a el no se
+ * El Historial tal como lo ve la UI (`DevHistory` de `canonical`): cada destino es alcanzable si `saltar` a el no se
  * rechaza sobre `disco` (la regla de deshacer); `reason` solo si no lo es.
  */
-export function historialVisible(historial: HistorialDeArchivos, disco: ArchivosDelWorkspace): HistorialDeDev {
-  const alcance = (id: number): HistorialDeDev['inicio'] => {
+export function historialVisible(historial: HistorialDeArchivos, disco: ArchivosDelWorkspace): DevHistory {
+  const alcance = (id: number): DevHistory['inicio'] => {
     const r = saltar(historial, disco, id);
     return r.ok ? { alcanzable: true } : { alcanzable: false, reason: r.message };
   };
-  const visible = ({ id, descripcion, cuando, cambios }: EntradaDelHistorial): EntradaDelHistorialDeDev => ({ id, descripcion, archivos: Object.keys(cambios), cuando, ...alcance(id) });
-  return { pasado: historial.pasado.map(visible), futuro: historial.futuro.map(visible), inicio: alcance(INICIO_DEL_HISTORIAL_DE_DEV) };
+  const visible = ({ id, descripcion, cuando, cambios }: EntradaDelHistorial): DevHistoryEntry => ({ id, descripcion, archivos: Object.keys(cambios), cuando, ...alcance(id) });
+  return { pasado: historial.pasado.map(visible), futuro: historial.futuro.map(visible), inicio: alcance(DEV_HISTORY_START) };
 }

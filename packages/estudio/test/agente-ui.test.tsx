@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { EventoDeActividad } from 'canonico';
+import type { ActivityEvent } from 'canonical';
 
 import { eventoDeActividad, lineasDeActividad } from '../src/contrato';
 import { lienzoListo, montarEstudio } from './ayudas-de-ui';
@@ -36,7 +36,7 @@ view otra {
 `;
 
 const ARGS = ['--workspace', '.', '--intent', '{"tipo":"move-pin"}'];
-const evento = (pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => eventoDeActividad(pid, { args: ARGS, ...extra });
+const evento = (pid: number, extra: Partial<ActivityEvent> = {}): ActivityEvent => eventoDeActividad(pid, { args: ARGS, ...extra });
 const lineas = lineasDeActividad;
 
 const feed = () => screen.getByRole('list', { name: 'Agent activity' });

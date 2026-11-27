@@ -1,6 +1,6 @@
 /** Esquema estricto del Tema resuelto (sin herencia; las Capas se validan con `construirPrimitiva`) y el Tema neutro. */
 import { z } from 'zod';
-import type { Tema } from 'canonico';
+import type { Theme } from 'canonical';
 
 import { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES } from './animacion';
 import { DEFINICION_DE_SLOT, SLOTS, construirPrimitiva } from './catalogo';
@@ -507,7 +507,7 @@ export const leerOps = (datos: unknown): OpDeCapa[] => z.array(opSchema).parse(d
 const memo = new WeakMap<object, TemaResuelto>();
 
 /** Lanza con la ruta de cada fallo si el Tema no cumple el esquema estricto. */
-export function resolverTema(tema: Tema): TemaResuelto {
+export function resolverTema(tema: Theme): TemaResuelto {
   const hecho = memo.get(tema);
   if (hecho !== undefined) return hecho;
   const leido = temaResueltoSchema.safeParse(tema);

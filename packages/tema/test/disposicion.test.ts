@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CODIGOS } from 'canonico';
+import { CODES } from 'canonical';
 import { colocarDisposicion, construirDisposicion, medirDisposicion } from 'tema';
 import type { CajaDeSlots, EntradaDeCaja, MedidaDeSlot, NombreDeSlot } from 'tema';
 
@@ -95,12 +95,12 @@ describe('validacion de la disposicion', () => {
     );
 
     expect(errores.map((e) => [e.codigo, e.ref])).toEqual([
-      [CODIGOS.E_THEME_UNKNOWN_PROPERTY, 'p1'],
-      [CODIGOS.E_THEME_INVALID_VALUE, 'p2'],
-      [CODIGOS.E_THEME_UNKNOWN_SLOT, 'h1'],
-      [CODIGOS.E_THEME_INVALID_VALUE, 'a2'],
-      [CODIGOS.E_THEME_UNKNOWN_SLOT, 'h3'],
-      [CODIGOS.E_THEME_INVALID_VALUE, 'f'],
+      [CODES.E_THEME_UNKNOWN_PROPERTY, 'p1'],
+      [CODES.E_THEME_INVALID_VALUE, 'p2'],
+      [CODES.E_THEME_UNKNOWN_SLOT, 'h1'],
+      [CODES.E_THEME_INVALID_VALUE, 'a2'],
+      [CODES.E_THEME_UNKNOWN_SLOT, 'h3'],
+      [CODES.E_THEME_INVALID_VALUE, 'f'],
     ]);
     expect(errores[0]!.hint).toBe("did you mean 'gap'");
     expect(errores[2]!.hint).toBe("did you mean 'title'");

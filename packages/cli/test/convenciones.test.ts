@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { salidaDeValidateSchema } from 'canonico';
+import { validateOutputSchema } from 'canonical';
 import { run } from 'cli';
 
 const MODELO = `specification {
@@ -30,7 +30,7 @@ function workspace(archivos: Record<string, string>): string {
 
 async function validar(raiz: string) {
   const resultado = await run(['validate', '--workspace', raiz, '--json']);
-  return { exitCode: resultado.exitCode, salida: salidaDeValidateSchema.parse(JSON.parse(resultado.stdout)) };
+  return { exitCode: resultado.exitCode, salida: validateOutputSchema.parse(JSON.parse(resultado.stdout)) };
 }
 
 /** Applies the rename `fix`es as `validate` reports them, through `edit --edits` (one batch). */

@@ -1,8 +1,8 @@
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
-import type { Geometria, Tema } from 'canonico';
+import { canonicalFormSchema } from 'canonical';
+import type { Geometry, Theme } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -11,13 +11,13 @@ import type { TemaResuelto } from 'tema';
 afterEach(cleanup);
 
 const nodo = (id: string) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children: [] });
-const fuente = fuenteCanonicaSchema.parse({
+const fuente = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'servicio' }] },
   model: { nodes: [nodo('a'), nodo('b')], edges: [] },
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], steps: [{ title: 'uno', show: [{ selector: 'a' }] }] }],
 });
 const layout: AdaptadorDeLayout = async (vista) => {
-  const nodes: Geometria['nodes'] = {};
+  const nodes: Geometry['nodes'] = {};
   vista.nodes.forEach((n, i) => {
     nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
   });
@@ -30,7 +30,7 @@ const OSCURO: TemaResuelto = {
   tokens: { background: '#111827', foreground: '#f9fafb', border: '#4b5563' },
 };
 
-const montar = (tema: Tema) => render(<VistaInteractiva source={fuente} view="v" theme={tema} layout={layout} width={800} height={600} />);
+const montar = (tema: Theme) => render(<VistaInteractiva source={fuente} view="v" theme={tema} layout={layout} width={800} height={600} />);
 
 describe('chrome del shell', () => {
   it('toma sus colores de variables CSS derivadas del Estilo del Tema oscuro', async () => {

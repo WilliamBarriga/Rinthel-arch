@@ -2,8 +2,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { resolveView } from 'canonico';
-import type { VistaDeGrafo, VistaDeSecuencia } from 'canonico';
+import { resolveView } from 'canonical';
+import type { GraphView, SequenceView } from 'canonical';
 import { compile } from 'dsl';
 import { abrirSesion } from 'sesion';
 import { CATALOGO, ESTADOS, estiloResuelto, resolverTema } from 'tema';
@@ -71,7 +71,7 @@ describe('galeria de Temas de ejemplo', () => {
   });
 
   it.each(TEMAS)('la Vista de referencia de %s equivale a la Vista abierto del prototipo', (tema) => {
-    const vista = resolveView(canonico!, `${tema}-reference`) as VistaDeGrafo;
+    const vista = resolveView(canonico!, `${tema}-reference`) as GraphView;
     const abierto = (id: string) => vista.nodes.find((n) => n.id === `reference.${id}`)!;
     // Grupos abiertos con sus modulos y Grupos colapsados con contador (4 raices, 3 abiertos).
     for (const id of ['render', 'session', 'layout']) expect(abierto(id).collapsed, id).toBe(false);
@@ -86,11 +86,11 @@ describe('galeria de Temas de ejemplo', () => {
   });
 
   it.each(TEMAS)('%s tiene Vistas de secuencia (con Fragmento y Nota) y ER (con tres tablas) con su Tema', (tema) => {
-    const secuencia = resolveView(canonico!, `${tema}-sequence`) as VistaDeSecuencia;
+    const secuencia = resolveView(canonico!, `${tema}-sequence`) as SequenceView;
     expect(secuencia.type).toBe('sequence');
     expect(secuencia.nodes.map((n) => n.id).sort()).toEqual(['client', 'gateway', 'platform.events', 'platform.orders', 'platform.payments', 'provider']);
     expect(secuencia.interaction.items.map((i) => i.type)).toEqual(expect.arrayContaining(['fragment', 'note']));
-    const er = resolveView(canonico!, `${tema}-er`) as VistaDeGrafo;
+    const er = resolveView(canonico!, `${tema}-er`) as GraphView;
     expect(er.type).toBe('er');
     expect(er.nodes.map((n) => n.id).sort()).toEqual(['data.customers', 'data.lines', 'data.orders-table']);
     expect(er.edges).toHaveLength(2);

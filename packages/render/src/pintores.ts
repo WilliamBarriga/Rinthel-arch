@@ -2,8 +2,8 @@
  * Pintores por parte: leen solo del Estilo resuelto, sin numeros propios. Nodos y Grupos son HTML (cada Slot en el
  * rectangulo que reservo `layout`; el CSS solo pinta y recorta); Aristas y sus etiquetas son SVG. Puros.
  */
-import { sanearIcono } from 'canonico';
-import type { Atributo, CajaDeNodo, IconProvider, NodoResuelto } from 'canonico';
+import { sanitizeIcon } from 'canonical';
+import type { Attribute, NodeBox, IconProvider, ResolvedNode } from 'canonical';
 import { ESTADOS, LARGO_DE_MARCADOR_ER, alturaDeCabecera, capasDeAristaEr, pilaDeFila, chipsDeClaves, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
 import type { ContenidoDeNodo, Estado, Metricas, NombreDePrimitiva, NombreDeSlot, NombreDeSlotDeTexto, PinturaDeArista, PinturaDeNodo, PrimitivaPintada, Rect } from 'tema';
 
@@ -20,8 +20,8 @@ import { esDeZona } from './pintura/comun';
 type Punto = { x: number; y: number };
 
 export interface DatosDeNodo {
-  nodo: NodoResuelto;
-  caja: CajaDeNodo;
+  nodo: ResolvedNode;
+  caja: NodeBox;
   /** Color de trazo ya resuelto de la Paleta. */
   trazo: string;
   /** Texto de la etiqueta del Nodo (el titulo de un Grupo abierto; un Nodo hoja usa el que da `contenidoDeNodo`). */
@@ -45,7 +45,7 @@ interface ContextoDeSlot {
   estilo: Estilo;
   datos: DatosDeNodo;
   /** Atributos que se dibujan (vacio si el nivel de detalle los oculta). */
-  atributos: readonly Atributo[];
+  atributos: readonly Attribute[];
   /** Estilo de texto de los Slots del elemento que se dibuja (Nodo, Grupo abierto o colapsado). */
   textos: PinturaDeNodo['textos'];
   metricas: Metricas;
@@ -122,10 +122,10 @@ export function pintarGrupo(estilo: Estilo, datos: DatosDeNodo): Elemento[] {
 /**
  * Icono del Tipo de nodo dentro de `rect`. Variantes: `plain` (el glifo),
  * `box` (glifo en una caja con radio, relleno y borde) y `dot` (punto de color,
- * sin glifo). Solo se incrusta el glifo si pasa `sanearIcono`; el aspecto de la
+ * sin glifo). Solo se incrusta el glifo si pasa `sanitizeIcon`; el aspecto de la
  * caja y del punto lo da la hoja.
  */
-function pintarIcono(textos: PinturaDeNodo['textos'], nodo: NodoResuelto, trazo: string, icons: IconProvider | undefined, rect: Rect): Elemento[] {
+function pintarIcono(textos: PinturaDeNodo['textos'], nodo: ResolvedNode, trazo: string, icons: IconProvider | undefined, rect: Rect): Elemento[] {
   const variante = String(textos.icon?.props['variant'] ?? 'plain');
   // Un punto es el color del Tipo y no necesita glifo: se muestra aunque el Tipo no declare icono.
   if (nodo.icon === undefined && variante !== 'dot') return [];
@@ -133,7 +133,7 @@ function pintarIcono(textos: PinturaDeNodo['textos'], nodo: NodoResuelto, trazo:
   const atributos = { class: 'rd-icono', 'data-slot': 'icon', ...(nodo.icon !== undefined && { 'data-icon': nodo.icon }), 'data-variante': variante, style: enRect(rect, `color:${limpiarValorCss(String(textos.icon?.props['color'] ?? trazo))};`) };
   if (variante === 'dot') return [{ tag: 'div', attrs: atributos }];
   const crudo = nodo.icon === undefined ? undefined : icons?.resolve(nodo.icon);
-  const svg = crudo === undefined ? undefined : sanearIcono(crudo);
+  const svg = crudo === undefined ? undefined : sanitizeIcon(crudo);
   if (svg === undefined) return variante === 'box' ? [{ tag: 'div', attrs: atributos }] : [];
   // En caja el glifo deja un margen (o mide `glyph`); suelto ocupa todo el rectangulo.
   const disponible = Math.min(rect.width, rect.height);
@@ -157,7 +157,7 @@ const enLinea = (texto: PrimitivaPintada | undefined, estilo: Estilo, tamano?: n
  * pinta la pila de `row` del Estilo (segun si es impar, sus marcas de clave y si es opcional) y sus textos `name`, `type`
  * y `key` con su estilo.
  */
-function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atributo[], zona: Rect, metricasDeNodo: Metricas, estados?: DatosDeNodo['estados']): Elemento {
+function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Attribute[], zona: Rect, metricasDeNodo: Metricas, estados?: DatosDeNodo['estados']): Elemento {
   const { metricas } = estilo;
   const marcas = metricasDeNodo.marcasDeClave === true;
   const delTema = marcas ? estilo.pintura.fila : undefined;
@@ -202,7 +202,7 @@ function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atribut
 }
 
 /** Control de colapso de un Grupo: el glifo del Estilo segun el estado. */
-export function pintarControl(estilo: Estilo, { nodo, caja, alClic }: { nodo: NodoResuelto; caja: CajaDeNodo; alClic: () => void }): Elemento {
+export function pintarControl(estilo: Estilo, { nodo, caja, alClic }: { nodo: ResolvedNode; caja: NodeBox; alClic: () => void }): Elemento {
   const metricas = nodo.collapsed ? estilo.tabla.grupoColapsado : estilo.tabla.grupoAbierto;
   const alto = Math.min(alturaDeCabecera(metricas), caja.height);
   const rect = { x: caja.width - 2 * metricas.margenDeControl, y: 0, width: 2 * metricas.margenDeControl, height: alto };
@@ -325,7 +325,7 @@ export function centroDeEtiquetaSinCaja(estilo: Estilo, puntos: readonly Punto[]
  */
 export function pintarEtiquetaDeArista(
   estilo: Estilo,
-  { id, texto, puntos, caja }: { id: string; texto: string; puntos: readonly Punto[]; caja: CajaDeNodo | undefined },
+  { id, texto, puntos, caja }: { id: string; texto: string; puntos: readonly Punto[]; caja: NodeBox | undefined },
 ): Elemento {
   const { metricas, etiqueta } = estilo;
   const tamano = metricas.fontSize * metricas.escalaEtiqueta;

@@ -4,7 +4,7 @@
  * Invariantes: sin estado ni efectos; marcado determinista byte a byte; colores solo de la Paleta del Tema; lo animado
  * nunca provoca relayout; el codigo del Workspace entra solo por la prop `componentes`.
  * Errores: lanza si un Nodo de la Vista no esta en la Geometria, si la Geometria es de otro Tipo de diagrama o si el
- * Tema no cumple `resolverTema`. Depende de `canonico`, `tema` y `layout`; peer React 18 y 19.
+ * Tema no cumple `resolverTema`. Depende de `canonical`, `tema` y `layout`; peer React 18 y 19.
  */
 export { Diagram } from './diagram';
 export type { ComponenteDeTema, ComponentesDeTema, PropsDeCodigo } from './codigo';

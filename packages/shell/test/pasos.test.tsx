@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fuenteCanonicaSchema, idDeArista } from 'canonico';
-import type { GeometriaGrafo, VistaResuelta } from 'canonico';
+import { canonicalFormSchema, edgeId } from 'canonical';
+import type { GraphGeometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, VistaInteractivaProps } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -12,7 +12,7 @@ afterEach(cleanup);
 const nodo = (id: string) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children: [] });
 
 const fuente = (steps: unknown[]) =>
-  fuenteCanonicaSchema.parse({
+  canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: {
       nodes: [nodo('a'), nodo('b'), nodo('c')],
@@ -29,16 +29,16 @@ const pasos = [
   { title: 'Salida', show: [{ selector: 'c' }] },
 ];
 
-const enFila: AdaptadorDeLayout = async (vista: VistaResuelta) => {
-  const nodes: GeometriaGrafo['nodes'] = {};
+const enFila: AdaptadorDeLayout = async (vista: ResolvedView) => {
+  const nodes: GraphGeometry['nodes'] = {};
   vista.nodes.forEach((n, i) => {
     nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
   });
-  const edges: GeometriaGrafo['edges'] = {};
+  const edges: GraphGeometry['edges'] = {};
   for (const e of vista.type === 'sequence' ? [] : vista.edges) {
     const d = nodes[e.from.node]!;
     const h = nodes[e.to.node]!;
-    edges[idDeArista(e)] = { points: [{ x: d.x + 100, y: 25 }, { x: h.x, y: 25 }] };
+    edges[edgeId(e)] = { points: [{ x: d.x + 100, y: 25 }, { x: h.x, y: 25 }] };
   }
   return { nodes, edges, labels: {}, kind: 'grafo', pinsSolapados: [], width: 500, height: 50 };
 };
@@ -60,7 +60,7 @@ const sinVisibilidad = (c: HTMLElement) =>
 
 describe('Paso inicial por Tipo de diagrama', () => {
   it('una Vista ER con Pasos se monta en el primero, no vacia; architecture sigue en el 0', async () => {
-    const er = fuenteCanonicaSchema.parse({
+    const er = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
       model: { nodes: [nodo('a'), nodo('b')], edges: [] },
       views: [{ id: 'v', type: 'er', include: ['**'], exclude: [], steps: [{ title: 'Tablas', show: [{ selector: 'a' }] }] }],

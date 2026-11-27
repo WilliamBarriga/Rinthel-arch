@@ -1,6 +1,6 @@
 /** Catalogo de Primitivas y Slots: fuente unica de la validacion, los mensajes y la referencia generada. */
-import { CODIGOS, VALORES_DE_CATALOGO_ANTIGUOS, candidatosCercanos, mensajeDeValorAntiguo, renombreAntiguo } from 'canonico';
-import type { CategoriaDeCatalogo } from 'canonico';
+import { CODES, OLD_CATALOG_VALUES, nearestCandidates, oldValueMessage, oldRename } from 'canonical';
+import type { CatalogCategory } from 'canonical';
 
 import { CATALOGO_DE_EFECTOS } from './catalogo-efectos';
 import type { FamiliaDeEfectos } from './catalogo-efectos';
@@ -135,7 +135,7 @@ export const ubicacionesDe = (nombre: NombreDePrimitiva): UbicacionDePrimitiva[]
 export const esSlot = (nombre: string): nombre is NombreDeSlot => Object.hasOwn(DEFINICION_DE_SLOT, nombre);
 
 export const sugerir = (escrito: string, existentes: Iterable<string>): { hint?: string; candidato?: string } => {
-  const candidatos = candidatosCercanos(escrito, existentes);
+  const candidatos = nearestCandidates(escrito, existentes);
   const [unico] = candidatos;
   return candidatos.length === 0 ? {} : { hint: `did you mean ${candidatos.map((c) => `'${c}'`).join(' or ')}`, ...(candidatos.length === 1 && unico !== undefined && { candidato: unico }) };
 };
@@ -152,7 +152,7 @@ export function construirPrimitiva(
     return {
       errores: [
         {
-          codigo: CODIGOS.E_THEME_UNKNOWN_PRIMITIVE,
+          codigo: CODES.E_THEME_UNKNOWN_PRIMITIVE,
           mensaje: esPrimitiva(tipo)
             ? `Primitive '${tipo}' is not valid here (it belongs to ${ubicacionesDe(tipo).join(' and ')}); available: ${validas.join(', ')}`
             : `Unknown Primitive '${tipo}'; available: ${validas.join(', ')}`,
@@ -193,7 +193,7 @@ export function validarPropiedades(
       resultado[clave] = typeof valor === 'string' && /^-?\d+(?:\.\d+)?$/.test(valor) ? Number(valor) : valor;
     } else if (propiedad === undefined) {
       errores.push({
-        codigo: CODIGOS.E_THEME_UNKNOWN_PROPERTY,
+        codigo: CODES.E_THEME_UNKNOWN_PROPERTY,
         mensaje: `${sujeto} has no property '${clave}'; available: ${Object.keys(definidas).join(', ')}`,
         clave,
         ...sugerir(clave, Object.keys(definidas)),
@@ -207,11 +207,11 @@ export function validarPropiedades(
       for (const problema of problemas) {
         if (problema.renombre !== undefined) {
           // One Issue per expression: its fix already rewrites every old name in it.
-          if (problema.renombre === renombres[0]) errores.push({ codigo: CODIGOS.E_OLD_CATALOG_VALUE, mensaje: problema.mensaje, clave, ...(candidato !== undefined && { candidato }) });
+          if (problema.renombre === renombres[0]) errores.push({ codigo: CODES.E_OLD_CATALOG_VALUE, mensaje: problema.mensaje, clave, ...(candidato !== undefined && { candidato }) });
           continue;
         }
         errores.push({
-          codigo: problema.fueraDePaleta === true ? CODIGOS.E_UNKNOWN_PALETTE_COLOR : CODIGOS.E_THEME_INVALID_VALUE,
+          codigo: problema.fueraDePaleta === true ? CODES.E_UNKNOWN_PALETTE_COLOR : CODES.E_THEME_INVALID_VALUE,
           mensaje: problema.mensaje,
           clave,
           ...(problema.hint !== undefined && { hint: problema.hint }),
@@ -219,16 +219,16 @@ export function validarPropiedades(
       }
     } else if (propiedad.tipo === 'nombre') {
       if (/^[A-Z][A-Za-z0-9_]*$/.test(String(valor))) resultado[clave] = String(valor);
-      else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${clave}' of ${nombre} must be a Component name (starts with an uppercase letter, e.g. Aurora), not '${valor}'`, clave });
+      else errores.push({ codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `'${clave}' of ${nombre} must be a Component name (starts with an uppercase letter, e.g. Aurora), not '${valor}'`, clave });
     } else if (propiedad.tipo === 'texto') {
       const texto = String(valor);
       if (texto.length <= propiedad.largo) resultado[clave] = texto;
-      else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${clave}' of ${nombre} must be text of at most ${propiedad.largo} characters, not '${texto}'`, clave });
+      else errores.push({ codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `'${clave}' of ${nombre} must be text of at most ${propiedad.largo} characters, not '${texto}'`, clave });
     } else if (propiedad.tipo === 'opcion') {
       if (propiedad.valores.includes(String(valor))) resultado[clave] = String(valor);
       else {
         errores.push({
-          codigo: CODIGOS.E_THEME_INVALID_VALUE,
+          codigo: CODES.E_THEME_INVALID_VALUE,
           mensaje: `'${clave}' of ${nombre} must be one of ${propiedad.valores.join(', ')}, not '${valor}'`,
           clave,
           ...sugerir(String(valor), propiedad.valores),
@@ -238,7 +238,7 @@ export function validarPropiedades(
       const numero = typeof valor === 'number' ? valor : /^-?\d+(?:\.\d+)?$/.test(valor) ? Number(valor) : Number.NaN;
       if (Number.isNaN(numero) || numero < propiedad.min || numero > propiedad.max) {
         errores.push({
-          codigo: CODIGOS.E_THEME_INVALID_VALUE,
+          codigo: CODES.E_THEME_INVALID_VALUE,
           mensaje: `'${clave}' of ${nombre} must be a number between ${propiedad.min} and ${propiedad.max}, not '${valor}'`,
           clave,
         });
@@ -254,7 +254,7 @@ export function validarPropiedades(
     else if (propiedad.tipo === 'opcion' && propiedad.defecto !== undefined) resultado[clave] = propiedad.defecto;
     else if (propiedad.tipo === 'opcion' && propiedad.opcional === true) continue;
     else if ((propiedad.tipo === 'color' || propiedad.tipo === 'texto') && propiedad.opcional === true) continue;
-    else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `${sujeto} requires the property '${clave}'`, clave });
+    else errores.push({ codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `${sujeto} requires the property '${clave}'`, clave });
   }
   return { propiedades: resultado, errores };
 }
@@ -275,7 +275,7 @@ export function resolverTokens(
     const nombre = valor.slice(1);
     if (!Object.hasOwn(tokens, nombre)) {
       errores.push({
-        codigo: CODIGOS.E_THEME_UNKNOWN_TOKEN,
+        codigo: CODES.E_THEME_UNKNOWN_TOKEN,
         mensaje: `Token '${valor}' is not declared in the Theme's 'tokens'`,
         clave,
         ...sugerir(nombre, Object.keys(tokens)),
@@ -284,14 +284,14 @@ export function resolverTokens(
     }
     const numero = Number(tokens[nombre]);
     if (Number.isFinite(numero)) resueltas.push({ clave, valor: numero });
-    else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `Token '${valor}' is not a number ('${tokens[nombre]}')`, clave });
+    else errores.push({ codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `Token '${valor}' is not a number ('${tokens[nombre]}')`, clave });
   }
   return { props: resueltas, errores };
 }
 
 /** Un nombre antiguo (espanol) de `categoria` es el error `old-catalog-value` con el nuevo como `candidato` (el `fix`); `undefined` si no lo es. */
-export function errorDeValorAntiguo(categoria: CategoriaDeCatalogo, escrito: string): ErrorDeCatalogo | undefined {
-  const nuevo = renombreAntiguo(VALORES_DE_CATALOGO_ANTIGUOS, categoria, escrito);
+export function errorDeValorAntiguo(categoria: CatalogCategory, escrito: string): ErrorDeCatalogo | undefined {
+  const nuevo = oldRename(OLD_CATALOG_VALUES, categoria, escrito);
   if (nuevo === undefined) return undefined;
-  return { codigo: CODIGOS.E_OLD_CATALOG_VALUE, mensaje: mensajeDeValorAntiguo(categoria, escrito, nuevo), candidato: nuevo };
+  return { codigo: CODES.E_OLD_CATALOG_VALUE, mensaje: oldValueMessage(categoria, escrito, nuevo), candidato: nuevo };
 }

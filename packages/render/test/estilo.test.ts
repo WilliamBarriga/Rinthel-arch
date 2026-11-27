@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Tema } from 'canonico';
+import type { Theme } from 'canonical';
 import { resolverEstilo } from 'render';
 import { TEMA_NEUTRO, metricasDe } from 'tema';
 
@@ -36,7 +36,7 @@ describe('resolverEstilo', () => {
   });
 
   it('lleva las Metricas del Tema (las mismas que mide layout)', () => {
-    const tema: Tema = { ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, fontSize: '20px' } };
+    const tema: Theme = { ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, fontSize: '20px' } };
 
     expect(resolverEstilo(tema, 'architecture').metricas).toEqual(metricasDe(tema, 'architecture'));
   });

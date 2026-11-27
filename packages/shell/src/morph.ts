@@ -1,7 +1,7 @@
 /** Morph entre dos geometrias: interpolacion pura y el hook que la anima; sin reloj, o con duracion 0, no hay animacion. */
 import { useCallback, useEffect, useState } from 'react';
 
-import type { CajaDeNodo, Geometria, GeometriaGrafo, GeometriaSecuencia, RutaDeArista, Visibilidad } from 'canonico';
+import type { NodeBox, Geometry, GraphGeometry, SequenceGeometry, EdgeRoute, Visibility } from 'canonical';
 
 /** Pide un cuadro (`cuadro` recibe el tiempo en ms) y devuelve la funcion que lo cancela. */
 export type RelojDeCuadros = (cuadro: (ahoraMs: number) => void) => () => void;
@@ -18,8 +18,8 @@ const relojDeRaf: RelojDeCuadros = (cuadro) => {
 };
 
 export interface Morph {
-  desde: Geometria;
-  hasta: Geometria;
+  desde: Geometry;
+  hasta: Geometry;
   /** Grupo tocado, que se mantiene fijo en pantalla. */
   ancla: string;
 }
@@ -70,11 +70,11 @@ export function useMorph(
 
 const mezcla = (a: number, b: number, t: number): number => a + (b - a) * t;
 
-export function mezclarCaja(a: CajaDeNodo, b: CajaDeNodo, t: number): CajaDeNodo {
+export function mezclarCaja(a: NodeBox, b: NodeBox, t: number): NodeBox {
   return { x: mezcla(a.x, b.x, t), y: mezcla(a.y, b.y, t), width: mezcla(a.width, b.width, t), height: mezcla(a.height, b.height, t) };
 }
 
-function mezclarRuta(a: RutaDeArista, b: RutaDeArista, t: number): RutaDeArista {
+function mezclarRuta(a: EdgeRoute, b: EdgeRoute, t: number): EdgeRoute {
   if (a.points.length !== b.points.length) return b;
   return { points: b.points.map((p, i) => ({ x: mezcla(a.points[i]!.x, p.x, t), y: mezcla(a.points[i]!.y, p.y, t) })) };
 }
@@ -85,7 +85,7 @@ function mezclarRuta(a: RutaDeArista, b: RutaDeArista, t: number): RutaDeArista 
  * (`visibilidadDeMorph` lo funde); las rutas con distinto numero de puntos saltan
  * a la nueva.
  */
-export function interpolarGeometria(desde: Geometria, hasta: Geometria, t: number): Geometria {
+export function interpolarGeometria(desde: Geometry, hasta: Geometry, t: number): Geometry {
   switch (hasta.kind) {
     case 'grafo':
       return desde.kind === 'grafo' ? interpolarGrafo(desde, hasta, t) : hasta;
@@ -98,13 +98,13 @@ export function interpolarGeometria(desde: Geometria, hasta: Geometria, t: numbe
  * Secuencia: las cabeceras, las lineas de las Lifelines, las activaciones (si no cambia su numero), las flechas de los
  * Mensajes y los `box` de los Grupos se interpolan; lo demas (marcos, Notas, etiquetas) salta a la posicion final.
  */
-function interpolarSecuencia(desde: GeometriaSecuencia, hasta: GeometriaSecuencia, t: number): GeometriaSecuencia {
-  const nodes: GeometriaSecuencia['nodes'] = {};
+function interpolarSecuencia(desde: SequenceGeometry, hasta: SequenceGeometry, t: number): SequenceGeometry {
+  const nodes: SequenceGeometry['nodes'] = {};
   for (const [id, caja] of Object.entries(hasta.nodes)) {
     const previa = desde.nodes[id];
     nodes[id] = previa === undefined ? caja : mezclarCaja(previa, caja, t);
   }
-  const lifelines: GeometriaSecuencia['lifelines'] = {};
+  const lifelines: SequenceGeometry['lifelines'] = {};
   for (const [id, linea] of Object.entries(hasta.lifelines)) {
     const previa = desde.lifelines[id];
     lifelines[id] = previa === undefined ? linea : { ...linea, x: mezcla(previa.x, linea.x, t), y1: mezcla(previa.y1, linea.y1, t), y2: mezcla(previa.y2, linea.y2, t) };
@@ -114,7 +114,7 @@ function interpolarSecuencia(desde: GeometriaSecuencia, hasta: GeometriaSecuenci
     if (desde.activations.length !== hasta.activations.length || previa === undefined || previa.lifeline !== activacion.lifeline) return activacion;
     return { ...activacion, x: mezcla(previa.x, activacion.x, t), y1: mezcla(previa.y1, activacion.y1, t), y2: mezcla(previa.y2, activacion.y2, t) };
   });
-  const messages: GeometriaSecuencia['messages'] = {};
+  const messages: SequenceGeometry['messages'] = {};
   for (const [ruta, mensaje] of Object.entries(hasta.messages)) {
     const previo = desde.messages[ruta];
     const mismos = previo !== undefined && previo.points.length === mensaje.points.length;
@@ -133,13 +133,13 @@ function interpolarSecuencia(desde: GeometriaSecuencia, hasta: GeometriaSecuenci
   return { ...hasta, nodes, lifelines, activations, messages, groups, width: mezcla(desde.width, hasta.width, t), height: mezcla(desde.height, hasta.height, t) };
 }
 
-function interpolarGrafo(desde: GeometriaGrafo, hasta: GeometriaGrafo, t: number): GeometriaGrafo {
-  const nodes: Record<string, CajaDeNodo> = {};
+function interpolarGrafo(desde: GraphGeometry, hasta: GraphGeometry, t: number): GraphGeometry {
+  const nodes: Record<string, NodeBox> = {};
   for (const [id, caja] of Object.entries(hasta.nodes)) {
     const previa = desde.nodes[id];
     nodes[id] = previa === undefined ? caja : mezclarCaja(previa, caja, t);
   }
-  const edges: Record<string, RutaDeArista> = {};
+  const edges: Record<string, EdgeRoute> = {};
   for (const [id, ruta] of Object.entries(hasta.edges)) {
     const previa = desde.edges[id];
     edges[id] = previa === undefined ? ruta : mezclarRuta(previa, ruta, t);
@@ -148,7 +148,7 @@ function interpolarGrafo(desde: GeometriaGrafo, hasta: GeometriaGrafo, t: number
 }
 
 /** Visibilidad durante el morph: lo que no estaba en `desde` entra con fundido `t`; el resto manda `base` (o 1). */
-export function visibilidadDeMorph(desde: Geometria, hasta: Geometria, t: number, base?: Visibilidad): Visibilidad {
+export function visibilidadDeMorph(desde: Geometry, hasta: Geometry, t: number, base?: Visibility): Visibility {
   return (id) => {
     const previa = base?.(id) ?? 1;
     const aristaNueva = hasta.kind === 'grafo' && desde.kind === 'grafo' && hasta.edges[id] !== undefined && desde.edges[id] === undefined;

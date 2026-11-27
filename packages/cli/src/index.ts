@@ -6,7 +6,7 @@
  * Modos de error: issues como datos; fallo de uso o interno -> stderr, stdout vacio, codigo 2.
  * Codigos de salida: 0 correcto, 1 errores del Workspace o edicion rechazada, 2 fallo de uso o interno.
  */
-import { convencionesObsoletas, salidaDeValidateSchema } from 'canonico';
+import { obsoleteConventions, validateOutputSchema } from 'canonical';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
 
@@ -62,7 +62,7 @@ function leerOpciones(args: readonly string[], propias: Record<string, { type: '
 
 /**
  * `--help`, `-h`, `help [comando]` o sin argumentos dan el uso (codigo 0). `validate` y `build` salen 1 con errores
- * (con `--strict`, tambien con avisos); `--json` imprime exactamente un objeto `salidaDeValidateSchema`.
+ * (con `--strict`, tambien con avisos); `--json` imprime exactamente un objeto `validateOutputSchema`.
  * `build` reemplaza `canonico.json` y `geometria/` en `<workspace>/.diagrams/` y, si falla, los borra. `validate`,
  * `build`, `inspect` y `edit` anexan un Evento al Registro de actividad (`actividad.ts`), salvo `DIAGRAMS_ACTIVITY=0`. Un `--theme` no declarado,
  * un comando desconocido o una opcion invalida salen 2. Los `.tsx` de Temas se compilan sin ejecutarse.
@@ -164,8 +164,8 @@ async function ejecutar(
 
   let salida;
   try {
-    salida = salidaDeValidateSchema.parse(
-      construirSalida([...issues, ...convencionesObsoletas(listar(raiz))], { maxIssues, strict: opciones['strict'] === true }),
+    salida = validateOutputSchema.parse(
+      construirSalida([...issues, ...obsoleteConventions(listar(raiz))], { maxIssues, strict: opciones['strict'] === true }),
     );
   } catch (error) {
     return uso(`Internal error: the output does not meet the contract (${(error as Error).message})`);

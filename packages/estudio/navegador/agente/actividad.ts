@@ -5,7 +5,7 @@
  * mueven nada); solo los Eventos en vivo suben el contador (si no se sigue al agente) y llegan a `alEnVivo`.
  * Seams para la Diferencia (#196): `alEnVivo` (cada tanda nueva) y `siguiendo` (el interruptor).
  */
-import type { EventoDeActividad, FuenteCanonica, ObjetivoDeActividad } from 'canonico';
+import type { ActivityEvent, CanonicalForm, ActivityTarget } from 'canonical';
 
 import { actividadDeDevSchema } from '../../src/protocolo';
 import { almacenPorCliente, crearValor, escucharValidado, useObservable } from '../almacen';
@@ -17,7 +17,7 @@ export type TipoDeMarca = 'ok' | 'errores' | 'avisos' | 'fallo';
 const plural = (n: number, singular: string, varios: string): string => `${n} ${n === 1 ? singular : varios}`;
 
 /** `fallo` es la salida 2 (fallo de uso); `errores`, la salida 1 o un `resumen` con errores; `avisos`, un `resumen` solo con avisos. */
-export function marcaDelEvento({ exitCode, summary: resumen }: EventoDeActividad): { tipo: TipoDeMarca; texto: string } {
+export function marcaDelEvento({ exitCode, summary: resumen }: ActivityEvent): { tipo: TipoDeMarca; texto: string } {
   if (exitCode === 2) return { tipo: 'fallo', texto: 'usage failure' };
   if (resumen !== undefined && resumen.errors > 0) return { tipo: 'errores', texto: plural(resumen.errors, 'error', 'errors') };
   if (exitCode === 1) return { tipo: 'errores', texto: 'error' };
@@ -26,16 +26,16 @@ export function marcaDelEvento({ exitCode, summary: resumen }: EventoDeActividad
 }
 
 /** Quien (agente o `pid <n>`). */
-export const quienDelEvento = ({ agent: agente, pid }: EventoDeActividad): string => agente ?? `pid ${pid}`;
+export const quienDelEvento = ({ agent: agente, pid }: ActivityEvent): string => agente ?? `pid ${pid}`;
 
 /** Lo que nombra el objetivo, en una linea (vacio si no nombra nada). */
-export function textoDelObjetivo(objetivo: ObjetivoDeActividad | undefined): string {
+export function textoDelObjetivo(objetivo: ActivityTarget | undefined): string {
   if (objetivo === undefined) return '';
   return [objetivo.view, objetivo.node, objetivo.theme, objetivo.files?.join(', ')].filter((p) => p !== undefined && p !== '').join(' ');
 }
 
 /** "quien comando objetivo": la ultima linea del agente en la barra. */
-export const resumenDelEvento = (evento: EventoDeActividad): string => [quienDelEvento(evento), evento.command, textoDelObjetivo(evento.target)].filter((p) => p !== '').join(' ');
+export const resumenDelEvento = (evento: ActivityEvent): string => [quienDelEvento(evento), evento.command, textoDelObjetivo(evento.target)].filter((p) => p !== '').join(' ');
 
 export interface DestinoDelAgente {
   vista: string;
@@ -48,7 +48,7 @@ export interface DestinoDelAgente {
  * `nodo` se queda en la Vista activa si lo contiene o va a la primera Vista, en orden de declaracion, que lo contenga, y
  * lo selecciona; `archivos` no mueve. `undefined`: no hay adonde ir (o lo nombrado no existe en `fuente`).
  */
-export function destinoDelObjetivo(objetivo: ObjetivoDeActividad | undefined, fuente: FuenteCanonica, vistaActiva: string | undefined): DestinoDelAgente | undefined {
+export function destinoDelObjetivo(objetivo: ActivityTarget | undefined, fuente: CanonicalForm, vistaActiva: string | undefined): DestinoDelAgente | undefined {
   if (objetivo === undefined) return undefined;
   const { view: vista, node: nodo } = objetivo;
   if (vista !== undefined) {
@@ -63,7 +63,7 @@ const EVENTOS_EN_EL_FEED = 200;
 
 export interface InstantaneaDelAgente {
   /** Del mas viejo al mas nuevo. */
-  eventos: readonly EventoDeActividad[];
+  eventos: readonly ActivityEvent[];
   /** Eventos en vivo llegados sin seguir al agente desde la ultima vez que se vio el feed. */
   sinVer: number;
   /** Interruptor "seguir al agente". */
@@ -72,7 +72,7 @@ export interface InstantaneaDelAgente {
 
 export interface ActividadDelAgente extends Observable<InstantaneaDelAgente> {
   /** Cada tanda en vivo (no los `previos`), tras actualizar la instantanea; devuelve la baja. */
-  alEnVivo(alEventos: (eventos: readonly EventoDeActividad[]) => void): () => void;
+  alEnVivo(alEventos: (eventos: readonly ActivityEvent[]) => void): () => void;
   /** Encender pone el contador a cero. */
   seguir(siguiendo: boolean): void;
   /** El feed se vio: contador a cero. */
@@ -81,7 +81,7 @@ export interface ActividadDelAgente extends Observable<InstantaneaDelAgente> {
 
 export function crearActividadDelAgente(cliente: ClienteQueEscucha): ActividadDelAgente {
   const valor = crearValor<InstantaneaDelAgente>({ eventos: [], sinVer: 0, siguiendo: false });
-  const enVivo = new Set<(eventos: readonly EventoDeActividad[]) => void>();
+  const enVivo = new Set<(eventos: readonly ActivityEvent[]) => void>();
   escucharValidado(cliente, 'actividad', actividadDeDevSchema, ({ previos, eventos }) => {
     if (eventos.length === 0) return;
     const actual = valor.instantanea();

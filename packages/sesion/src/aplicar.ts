@@ -1,4 +1,4 @@
-import type { MotivoDeRechazo } from 'canonico';
+import type { RejectionReason } from 'canonical';
 import type { ArchivosDelWorkspace } from 'dsl';
 
 import { aplicarEdiciones, hashDeContenido, reemplazarTexto } from './ediciones';
@@ -40,7 +40,7 @@ export interface OpcionesDeAplicar {
 
 export type ResultadoDeAplicar =
   | { ok: true; cambiados: string[]; ediciones: EdicionConHash[]; renombrados: Renombrado[] }
-  | { ok: false; reason: MotivoDeRechazo; message: string; file?: string };
+  | { ok: false; reason: RejectionReason; message: string; file?: string };
 
 /** A path renamed by an edit: `file` is the old path, `rename` the new one. */
 export interface Renombrado {

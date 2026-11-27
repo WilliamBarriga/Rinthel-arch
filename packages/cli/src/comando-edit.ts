@@ -3,10 +3,10 @@
  * Formas: Pin (`--view --node --x --y`), `--intent '<json>'` o `--edits '<json>'` (rangos 1-based, fin excluido).
  * `--hash <archivo>=<hash>` es el `visto` de la Intencion; cada edicion lleva su `hash` (o toma `--hash`; sin ninguno,
  * el del disco al leer). Un hash viejo rechaza todo, sin escritura parcial.
- * Salida: con `--json`, un `salidaDeEditSchema` tambien al rechazar. Codigos: 0 escrito, 1 rechazo, 2 fallo de uso o interno.
+ * Salida: con `--json`, un `editOutputSchema` tambien al rechazar. Codigos: 0 escrito, 1 rechazo, 2 fallo de uso o interno.
  */
-import { EDIT_CONTRACT_VERSION, edicionesPedidasSchema, intencionSchema, salidaDeEditSchema } from 'canonico';
-import type { SalidaDeEdit } from 'canonico';
+import { EDIT_CONTRACT_VERSION, requestedEditsSchema, intentSchema, editOutputSchema } from 'canonical';
+import type { EditOutput } from 'canonical';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { existsSync, renameSync } from 'node:fs';
 import { parseArgs } from 'node:util';
@@ -87,7 +87,7 @@ export async function editar(
   if (v.edits !== undefined) {
     let pedidas;
     try {
-      pedidas = edicionesPedidasSchema.parse(JSON.parse(v.edits));
+      pedidas = requestedEditsSchema.parse(JSON.parse(v.edits));
     } catch (error) {
       return uso(`--edits is not a valid array of { file, range, replacement, hash? }: ${(error as Error).message}`);
     }
@@ -100,7 +100,7 @@ export async function editar(
       return uso(`--intent is not JSON: ${(error as Error).message}`);
     }
     // Un `hash` en el JSON se ignora: la concurrencia de una Intencion la decide `--hash`.
-    const leida = intencionSchema.safeParse(crudo);
+    const leida = intentSchema.safeParse(crudo);
     if (!leida.success) return uso(`--intent is not a valid Intent: ${leida.error.message}`);
     aplicable = leida.data;
   } else {
@@ -140,7 +140,7 @@ export async function editar(
   const { ediciones, cambiados, renombrados } = resultado;
   // `files`: written files plus the new path of each rename.
   const tocados = [...new Set([...cambiados, ...renombrados.map((r) => r.rename)])].sort();
-  const salida: SalidaDeEdit = salidaDeEditSchema.parse({
+  const salida: EditOutput = editOutputSchema.parse({
     contractVersion: EDIT_CONTRACT_VERSION,
     ok: true,
     edits: ediciones.map(({ file, range, replacement, rename }) => ({ file, range, replacement, ...(rename !== undefined && { rename }) })),
@@ -156,7 +156,7 @@ export async function editar(
 function rechazado(r: RechazoDeEdicion, json: boolean): ResultadoDeEjecucion {
   const exitCode = CODIGO_DE_RECHAZO;
   if (!json) return { exitCode, stdout: '', stderr: `Edit rejected (${r.reason}): ${r.message}\n` };
-  const salida = salidaDeEditSchema.parse({
+  const salida = editOutputSchema.parse({
     contractVersion: EDIT_CONTRACT_VERSION,
     ok: false,
     reason: r.reason,

@@ -1,6 +1,6 @@
 /** La consulta de `inspect` sobre una Sesion y el formato de toda su salida (JSON y legible). */
-import { salidaDeInspectSchema } from 'canonico';
-import type { ComandoDeInspect, SalidaDeInspect } from 'canonico';
+import { inspectOutputSchema } from 'canonical';
+import type { InspectCommand, InspectOutput } from 'canonical';
 import type { Respuesta, Sesion } from 'sesion';
 
 type Sitio = { file: string; line: number };
@@ -8,7 +8,7 @@ type Sitio = { file: string; line: number };
 
 /** Una consulta de `inspect`; `tipo`, `estado`, `diagrama` y `catalogo` solo cuentan en `tema`. */
 export interface ConsultaDeInspect {
-  comando: ComandoDeInspect;
+  comando: InspectCommand;
   argumento: string;
   tipo?: string;
   estado?: string;
@@ -23,15 +23,15 @@ export function consultarInspect(sesion: Sesion, { comando, argumento, tipo, est
 }
 
 /** La salida tal como la da `inspect --json` (validada y normalizada por el esquema). */
-export const comoSalidaDeInspect = (salida: SalidaDeInspect): SalidaDeInspect => salidaDeInspectSchema.parse(salida);
+export const comoSalidaDeInspect = (salida: InspectOutput): InspectOutput => inspectOutputSchema.parse(salida);
 
-export const comoJson = (salida: SalidaDeInspect): string => `${JSON.stringify(comoSalidaDeInspect(salida), null, 2)}\n`;
+export const comoJson = (salida: InspectOutput): string => `${JSON.stringify(comoSalidaDeInspect(salida), null, 2)}\n`;
 
 const sitio = ({ file, line }: Sitio): string => `${file}:${line}`;
 const titulo = (t: string): string => (t === '' ? '' : ` "${t}"`);
 
 /** Una linea por resultado. */
-export function textoLegible(salida: SalidaDeInspect): string {
+export function textoLegible(salida: InspectOutput): string {
   const lineas: string[] = [];
   if (salida.command === 'search') {
     for (const r of salida.results) lineas.push(r.kind === 'view' ? `view ${r.id} ${r.type} ${sitio(r)}` : r.kind === 'interaction' ? `interaction ${r.id}${titulo(r.title)} ${sitio(r)}` : `node ${r.id} ${r.type}${titulo(r.title)} ${sitio(r)}`);

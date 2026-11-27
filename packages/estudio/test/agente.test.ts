@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { EventoDeActividad, FuenteCanonica } from 'canonico';
+import type { ActivityEvent, CanonicalForm } from 'canonical';
 import { abrirSesion } from 'sesion';
 
 import { eventoDeActividad } from '../src/contrato';
@@ -33,9 +33,9 @@ view solo-cache {
 }
 `;
 
-const fuente = abrirSesion({ 'main.dg': DSL }).fuente as FuenteCanonica;
+const fuente = abrirSesion({ 'main.dg': DSL }).fuente as CanonicalForm;
 
-const evento = (extra: Partial<EventoDeActividad> = {}): EventoDeActividad => eventoDeActividad(7, { args: [], ...extra });
+const evento = (extra: Partial<ActivityEvent> = {}): ActivityEvent => eventoDeActividad(7, { args: [], ...extra });
 
 describe('seguir al agente: destino de un objetivo', () => {
   it('objetivo.vista navega a esa Vista; si ademas nombra un Nodo que contiene, lo selecciona', () => {

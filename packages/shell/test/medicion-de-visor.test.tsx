@@ -1,8 +1,8 @@
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
-import type { Geometria } from 'canonico';
+import { canonicalFormSchema } from 'canonical';
+import type { Geometry } from 'canonical';
 import { VistaInteractiva, adaptadorDeWorker, medirEnVisor, servirLayout } from 'shell';
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
 import { TEMA_NEUTRO, claveDeTexto } from 'tema';
@@ -11,7 +11,7 @@ import type { MedidasDeTexto, TextoAMedir } from 'tema';
 afterEach(cleanup);
 
 const nodo = (id: string) => ({ id, type: 'servicio', title: id, description: '', children: [] });
-const fuente = fuenteCanonicaSchema.parse({
+const fuente = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'servicio' }] },
   model: { nodes: [nodo('a')], edges: [] },
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
@@ -42,7 +42,7 @@ describe('medirEnVisor', () => {
 });
 
 describe('VistaInteractiva con medicion real', () => {
-  const geometria: Geometria = { nodes: { a: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 100, height: 50 };
+  const geometria: Geometry = { nodes: { a: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 100, height: 50 };
 
   it('un texto con peso se carga y se mide con ese peso, bajo su propia clave', async () => {
     const fuentes: string[] = [];
@@ -114,7 +114,7 @@ describe('layout en Worker con medidas', () => {
     })();
     servirLayout(worker);
     const adaptador = adaptadorDeWorker(pagina);
-    const vista = { ...(await import('canonico')).resolveView(fuente, 'v')! };
+    const vista = { ...(await import('canonical')).resolveView(fuente, 'v')! };
     const m = TEMA_NEUTRO.fonts['body']!;
     const fontSize = 14;
 

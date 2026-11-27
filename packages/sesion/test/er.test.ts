@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { idDeArista } from 'canonico';
+import { edgeId } from 'canonical';
 import { abrirSesion } from 'sesion';
 
 const MARCADOR_ER = 12;
@@ -31,7 +31,7 @@ async function tramosFinales(sesion: ReturnType<typeof abrirSesion>) {
   const { geometry } = (await sesion.geometria('tablas'))!;
   if (geometry.kind !== 'grafo') throw new Error('se esperaba geometria de grafo');
   return sesion.fuente!.model.edges.flatMap((arista) => {
-    const { points } = geometry.edges[idDeArista(arista)]!;
+    const { points } = geometry.edges[edgeId(arista)]!;
     return [points.slice(0, 2), points.slice(-2)] as const;
   });
 }

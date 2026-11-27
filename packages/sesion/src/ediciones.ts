@@ -1,17 +1,17 @@
-import { hashDeContenido } from 'canonico';
-import type { Issue, MotivoDeRechazo, TextPosition, TextRange } from 'canonico';
+import { contentHash } from 'canonical';
+import type { Issue, RejectionReason, TextPosition, TextRange } from 'canonical';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace } from 'dsl';
 
-/** Vive en `canonico` (puro, lo usa tambien el editor del navegador); se reexporta por compatibilidad. */
-export { hashDeContenido };
+/** Vive en `canonical` (puro, lo usa tambien el editor del navegador); se reexporta por compatibilidad. */
+export { contentHash as hashDeContenido };
 
 export interface EdicionConHash {
   file: string;
   /** Rango 1-based, fin excluido (el mismo de `IssueFix`). */
   range: TextRange;
   replacement: string;
-  /** `hashDeContenido` del archivo tal como lo vio el llamador. */
+  /** `contentHash` del archivo tal como lo vio el llamador. */
   hash: string;
   /** New path of `file` (a file or folder): a rename, applied by `aplicarAlWorkspace`, not by the text functions. */
   rename?: string;
@@ -20,9 +20,9 @@ export interface EdicionConHash {
 /** Con `ok: false` no se escribe nada. */
 export type ResultadoDeEdicion<T> =
   | ({ ok: true } & T)
-  | { ok: false; reason: MotivoDeRechazo; message: string; file?: string };
+  | { ok: false; reason: RejectionReason; message: string; file?: string };
 
-export const rechazo = (reason: MotivoDeRechazo, message: string, file?: string) =>
+export const rechazo = (reason: RejectionReason, message: string, file?: string) =>
   ({ ok: false, reason, message, ...(file === undefined ? {} : { file }) }) as const;
 
 /** Offset de una posicion 1-based; `undefined` si cae fuera del texto. */
@@ -83,7 +83,7 @@ export function reemplazarTexto(archivos: ArchivosDelWorkspace, ediciones: reado
   for (const { file, range, replacement, hash } of ediciones) {
     const actual = archivos[file];
     if (actual === undefined) return rechazo('unknown-file', `File '${file}' does not exist`, file);
-    if (hash !== hashDeContenido(actual)) {
+    if (hash !== contentHash(actual)) {
       return rechazo('stale-hash', `File '${file}' changed since it was read`, file);
     }
     const inicio = offsetDe(actual, range.start);

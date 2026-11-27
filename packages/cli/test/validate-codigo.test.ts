@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { salidaDeInspectSchema, salidaDeValidateSchema } from 'canonico';
+import { inspectOutputSchema, validateOutputSchema } from 'canonical';
 import { run } from 'cli';
 
 const FIXTURE = resolve(__dirname, 'fixtures/tema-codigo');
@@ -21,7 +21,7 @@ afterEach(() => {
 
 async function validar(raiz: string) {
   const r = await run(['validate', '--workspace', raiz, '--json']);
-  return { ...r, salida: salidaDeValidateSchema.parse(JSON.parse(r.stdout)) };
+  return { ...r, salida: validateOutputSchema.parse(JSON.parse(r.stdout)) };
 }
 
 describe('validate: Tema con codigo', () => {
@@ -62,7 +62,7 @@ describe('validate: Tema con codigo', () => {
   it('inspect theme marca el Tema con codigo y lista sus componentes', async () => {
     const r = await run(['inspect', 'theme', 'neon', '--workspace', FIXTURE, '--json']);
 
-    const salida = salidaDeInspectSchema.parse(JSON.parse(r.stdout));
+    const salida = inspectOutputSchema.parse(JSON.parse(r.stdout));
     expect(salida.command === 'theme' && salida.theme).toMatchObject({ hasCode: true, components: ['Aurora'] });
   });
 });

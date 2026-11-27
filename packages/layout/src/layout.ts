@@ -1,7 +1,7 @@
 /** Layout de una Vista de grafo con ELK: `INCLUDE_CHILDREN`, sin `considerModelOrder`. */
 import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
-import { idDeArista } from 'canonico';
-import type { CajaDeNodo, Geometria, GeometriaGrafo, ItemResuelto, NodoResuelto, OverrideDeNodo, Punto, RutaDeArista, Tema, VistaDeGrafo, VistaResuelta } from 'canonico';
+import { edgeId } from 'canonical';
+import type { NodeBox, Geometry, GraphGeometry, ResolvedItem, ResolvedNode, NodeOverride, Point, EdgeRoute, Theme, GraphView, ResolvedView } from 'canonical';
 
 import { indiceDeGeometria } from './indice';
 import { layoutSecuencia } from './secuencia';
@@ -36,19 +36,19 @@ const OPCIONES_RAIZ = {
  * Rechaza si ELK falla.
  */
 export async function layoutView(
-  vista: VistaResuelta,
-  tema: Tema,
+  vista: ResolvedView,
+  tema: Theme,
   opciones: OpcionesDeLayout = {},
-): Promise<Geometria> {
+): Promise<Geometry> {
   return layoutConMetricas(vista, opciones.metricas ?? tablaDeMetricas(tema, vista.type, opciones.medidas), opciones);
 }
 
 /** `layoutView` sobre Metricas ya resueltas, sin el Tema: es lo que corre el Worker, que no empaqueta el esquema del Tema. */
 export async function layoutConMetricas(
-  vista: VistaResuelta,
+  vista: ResolvedView,
   metricas: Metricas | TablaDeMetricas,
   opciones: { elk?: ELK } = {},
-): Promise<Geometria> {
+): Promise<Geometry> {
   switch (vista.type) {
     case 'architecture':
     case 'flow':
@@ -60,10 +60,10 @@ export async function layoutConMetricas(
 }
 
 async function layoutGrafo(
-  vista: VistaDeGrafo,
+  vista: GraphView,
   metricas: Metricas | TablaDeMetricas,
   opciones: { elk?: ELK },
-): Promise<GeometriaGrafo> {
+): Promise<GraphGeometry> {
   // Import dinamico: quien solo usa las medidas (render) no arrastra ELK al empaquetar.
   const elk = opciones.elk ?? new (await import('elkjs/lib/elk.bundled.js')).default();
   const medidas = comoTabla(metricas);
@@ -73,15 +73,15 @@ async function layoutGrafo(
     layoutOptions: OPCIONES_RAIZ,
     children: indiceDeGeometria(vista, { nodes: {} }).raices.map((nodo) => aElk(nodo, medidas)),
     edges: vista.edges.map((arista) => ({
-      id: idDeArista(arista),
+      id: edgeId(arista),
       sources: [arista.from.node],
       targets: [arista.to.node],
-      ...(arista.label !== undefined && { labels: [{ id: `${idDeArista(arista)}:etiqueta`, text: arista.label, ...tamanoDeEtiqueta(arista.label, medidas.etiqueta) }] }),
+      ...(arista.label !== undefined && { labels: [{ id: `${edgeId(arista)}:etiqueta`, text: arista.label, ...tamanoDeEtiqueta(arista.label, medidas.etiqueta) }] }),
     })),
   };
   const resultado = await elk.layout(grafo);
 
-  const nodes: Record<string, CajaDeNodo> = {};
+  const nodes: Record<string, NodeBox> = {};
   const recoger = (hijos: readonly ElkNode[] | undefined): void => {
     for (const hijo of hijos ?? []) {
       nodes[hijo.id] = { x: hijo.x ?? 0, y: hijo.y ?? 0, width: hijo.width ?? 0, height: hijo.height ?? 0 };
@@ -89,8 +89,8 @@ async function layoutGrafo(
     }
   };
   recoger(resultado.children);
-  const edges: Record<string, RutaDeArista> = {};
-  const labels: Record<string, CajaDeNodo> = {};
+  const edges: Record<string, EdgeRoute> = {};
+  const labels: Record<string, NodeBox> = {};
   for (const arista of resultado.edges ?? []) {
     const [seccion] = arista.sections ?? [];
     if (seccion === undefined) continue;
@@ -101,7 +101,7 @@ async function layoutGrafo(
   return conPinsYPuertos(vista, medidas, { kind: 'grafo', nodes, edges, labels, pinsSolapados: [], width: resultado.width ?? 0, height: resultado.height ?? 0 });
 }
 
-function conPinsYPuertos(vista: VistaDeGrafo, medidas: TablaDeMetricas, base: GeometriaGrafo): GeometriaGrafo {
+function conPinsYPuertos(vista: GraphView, medidas: TablaDeMetricas, base: GraphGeometry): GraphGeometry {
   const pinneada = aplicarPins(vista, base.nodes, base.edges, base.labels);
   const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, medidas, pinneada.nodes, pinneada.edges) };
   // ER: el pie de gallo necesita un tramo final horizontal de al menos su largo; se garantiza tras puertos y Pins.
@@ -110,7 +110,7 @@ function conPinsYPuertos(vista: VistaDeGrafo, medidas: TablaDeMetricas, base: Ge
 }
 
 /** Anade a cada Nodo hoja el rectangulo de sus Slots, el mismo que usa `render` para pintar. */
-function conSlots(vista: VistaResuelta, medidas: TablaDeMetricas, nodes: Record<string, CajaDeNodo>): Record<string, CajaDeNodo> {
+function conSlots(vista: ResolvedView, medidas: TablaDeMetricas, nodes: Record<string, NodeBox>): Record<string, NodeBox> {
   const resultado = { ...nodes };
   for (const nodo of vista.nodes) {
     const caja = resultado[nodo.id];
@@ -126,7 +126,7 @@ function conSlots(vista: VistaResuelta, medidas: TablaDeMetricas, nodes: Record<
  * Aplica los Pins de `vista` a `base`, la geometria de la misma estructura calculada sin Pins. Da el mismo
  * resultado que `layoutView` sin volver a ejecutar ELK.
  */
-export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): Geometria {
+export function aplicarPinsAGeometria(vista: ResolvedView, base: Geometry, tema: Theme, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): Geometry {
   switch (vista.type) {
     case 'sequence':
       // La Geometria de secuencia sale completa de su layout: no hay paso post-layout.
@@ -145,14 +145,14 @@ export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tem
  * `pinsSolapados`: pares de Nodos pineados cuyas cajas se solapan, salvo ancestro y descendiente.
  */
 function aplicarPins(
-  vista: VistaDeGrafo,
-  nodes: Record<string, CajaDeNodo>,
-  edges: Record<string, RutaDeArista>,
-  labels: Record<string, CajaDeNodo>,
-): Pick<GeometriaGrafo, 'nodes' | 'edges' | 'labels' | 'pinsSolapados'> {
+  vista: GraphView,
+  nodes: Record<string, NodeBox>,
+  edges: Record<string, EdgeRoute>,
+  labels: Record<string, NodeBox>,
+): Pick<GraphGeometry, 'nodes' | 'edges' | 'labels' | 'pinsSolapados'> {
   const pins = pinsDe(vista).filter((o) => nodes[o.node] !== undefined);
   if (pins.length === 0) return { nodes, edges, labels, pinsSolapados: [] };
-  const nuevos: Record<string, CajaDeNodo> = { ...nodes };
+  const nuevos: Record<string, NodeBox> = { ...nodes };
   for (const { node, pin } of pins) {
     const caja = nuevos[node]!;
     nuevos[node] = { ...caja, x: pin.x - caja.width / 2, y: pin.y - caja.height / 2 };
@@ -162,14 +162,14 @@ function aplicarPins(
   const { padre } = indice;
   const dentroDe = (id: string, raiz: string): boolean => id === raiz || (padre.has(id) && dentroDe(padre.get(id)!, raiz));
   const movidos = pins.map((o) => o.node);
-  const rutas: Record<string, RutaDeArista> = { ...edges };
-  const etiquetas: Record<string, CajaDeNodo> = { ...labels };
+  const rutas: Record<string, EdgeRoute> = { ...edges };
+  const etiquetas: Record<string, NodeBox> = { ...labels };
   for (const arista of vista.edges) {
     const [origen, destino] = [arista.from.node, arista.to.node];
     const raizOrigen = movidos.find((m) => dentroDe(origen, m));
     const raizDestino = movidos.find((m) => dentroDe(destino, m));
     if (raizOrigen === undefined && raizDestino === undefined) continue;
-    const id = idDeArista(arista);
+    const id = edgeId(arista);
     const previa = edges[id];
     if (raizOrigen === raizDestino && previa !== undefined) {
       const antes = previo.cajas.get(raizOrigen!)!;
@@ -200,16 +200,16 @@ function aplicarPins(
  * ajusta un tramo final horizontal; si la ruta no tiene codo previo se inserta uno a mitad de camino.
  */
 function ajustarAPuertosDeAtributo(
-  vista: VistaDeGrafo,
+  vista: GraphView,
   tabla: TablaDeMetricas,
-  nodes: Record<string, CajaDeNodo>,
-  edges: Record<string, RutaDeArista>,
-): Record<string, RutaDeArista> {
+  nodes: Record<string, NodeBox>,
+  edges: Record<string, EdgeRoute>,
+): Record<string, EdgeRoute> {
   const atributos = new Map(vista.nodes.map((nodo) => [nodo.id, atributosVisibles(nodo, metricasDeHoja(tabla, nodo))]));
   const { cajas } = indiceDeGeometria(vista, { nodes });
   const rutas = { ...edges };
   for (const arista of vista.edges) {
-    const id = idDeArista(arista);
+    const id = edgeId(arista);
     const ruta = rutas[id];
     if (ruta === undefined) continue;
     let puntos = ruta.points;
@@ -231,10 +231,10 @@ function ajustarAPuertosDeAtributo(
  * Cada extremo de una Arista ER acaba en un tramo horizontal de al menos `LARGO_DE_MARCADOR_ER`, para que el
  * marcador de cardinalidad no se monte sobre el codo. Un extremo vertical pasa al lado del Nodo mas cercano a la ruta.
  */
-function garantizarTramosFinalesEr(vista: VistaDeGrafo, cajas: ReadonlyMap<string, CajaDeNodo>, edges: Record<string, RutaDeArista>): Record<string, RutaDeArista> {
+function garantizarTramosFinalesEr(vista: GraphView, cajas: ReadonlyMap<string, NodeBox>, edges: Record<string, EdgeRoute>): Record<string, EdgeRoute> {
   const rutas = { ...edges };
   for (const arista of vista.edges) {
-    const id = idDeArista(arista);
+    const id = edgeId(arista);
     const ruta = rutas[id];
     const [origen, destino] = [cajas.get(arista.from.node), cajas.get(arista.to.node)];
     if (ruta === undefined || ruta.points.length < 2 || origen === undefined || destino === undefined) continue;
@@ -252,7 +252,7 @@ function garantizarTramosFinalesEr(vista: VistaDeGrafo, cajas: ReadonlyMap<strin
   return rutas;
 }
 
-function tramoFinal(puntos: Punto[], caja: CajaDeNodo, lado: 'inicio' | 'fin'): Punto[] {
+function tramoFinal(puntos: Point[], caja: NodeBox, lado: 'inicio' | 'fin'): Point[] {
   const p = lado === 'inicio' ? [...puntos] : [...puntos].reverse();
   // `p[0]` es el puerto, `p[1]` el codo previo.
   let [puerto, codo] = [p[0]!, p[1]!];
@@ -281,7 +281,7 @@ function tramoFinal(puntos: Punto[], caja: CajaDeNodo, lado: 'inicio' | 'fin'): 
   return lado === 'inicio' ? p : p.reverse();
 }
 
-function moverPuerto(puntos: Punto[], lado: 'inicio' | 'fin', y: number): Punto[] {
+function moverPuerto(puntos: Point[], lado: 'inicio' | 'fin', y: number): Point[] {
   const copia = lado === 'inicio' ? [...puntos].reverse() : [...puntos];
   const fin = copia[copia.length - 1]!;
   const previo = copia[copia.length - 2]!;
@@ -300,13 +300,13 @@ function moverPuerto(puntos: Punto[], lado: 'inicio' | 'fin', y: number): Punto[
   return lado === 'inicio' ? copia.reverse() : copia;
 }
 
-function seSolapan(a: CajaDeNodo, b: CajaDeNodo): boolean {
+function seSolapan(a: NodeBox, b: NodeBox): boolean {
   return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
 
 /** Ruta en Z entre los bordes de dos cajas: horizontal si estan separadas en x o encimadas, si no vertical. */
-function rutaOrtogonal(origen: CajaDeNodo, destino: CajaDeNodo): Punto[] {
-  const centro = (c: CajaDeNodo): Punto => ({ x: c.x + c.width / 2, y: c.y + c.height / 2 });
+function rutaOrtogonal(origen: NodeBox, destino: NodeBox): Point[] {
+  const centro = (c: NodeBox): Point => ({ x: c.x + c.width / 2, y: c.y + c.height / 2 });
   const [o, d] = [centro(origen), centro(destino)];
   if (seSolapan(origen, destino) || origen.x + origen.width <= destino.x || destino.x + destino.width <= origen.x) {
     const derecha = d.x >= o.x;
@@ -326,7 +326,7 @@ function paddingElk({ top, left, bottom, right }: Metricas['paddingGrupo']): str
   return `[top=${top},left=${left},bottom=${bottom},right=${right}]`;
 }
 
-function aElk(nodo: NodoResuelto, tabla: TablaDeMetricas): ElkNode {
+function aElk(nodo: ResolvedNode, tabla: TablaDeMetricas): ElkNode {
   if (nodo.children.length === 0) {
     const medidas = metricasDeHoja(tabla, nodo);
     const { width, height } = colocarNodo(contenidoDeNodo(nodo, medidas), medidas);
@@ -345,12 +345,12 @@ function aElk(nodo: NodoResuelto, tabla: TablaDeMetricas): ElkNode {
  * Clave de cache de la geometria: igual si y solo si el layout no cambia. Entran estructura visible, textos, Pins,
  * Metricas y si el Nodo tiene icono; no paleta ni colores.
  */
-export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): string {
+export function claveDeLayout(vista: ResolvedView, tema: Theme, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): string {
   return JSON.stringify({ tipo: vista.type, estructura: claveDeEstructura(vista, tema, metricas), pins: pinsDe(vista).map((o) => [o.node, o.pin.x, o.pin.y]) });
 }
 
 /** Overrides con Pin de la Vista; una Vista de secuencia no tiene Pins (su orden lo da `order`). */
-function pinsDe(vista: VistaResuelta): (OverrideDeNodo & { pin: NonNullable<OverrideDeNodo['pin']> })[] {
+function pinsDe(vista: ResolvedView): (NodeOverride & { pin: NonNullable<NodeOverride['pin']> })[] {
   switch (vista.type) {
     case 'sequence':
       return [];
@@ -362,7 +362,7 @@ function pinsDe(vista: VistaResuelta): (OverrideDeNodo & { pin: NonNullable<Over
 }
 
 /** `claveDeLayout` sin los Pins: identifica la geometria que calcula ELK. */
-export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): string {
+export function claveDeEstructura(vista: ResolvedView, tema: Theme, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): string {
   const tabla = comoTabla(metricas);
   return JSON.stringify({
     tipo: vista.type,
@@ -373,30 +373,30 @@ export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Me
 }
 
 /** Lo que une a los Nodos en la clave de estructura: Aristas en un grafo; Mensajes, Fragmentos y `box` en secuencia. */
-function claveDeConexiones(vista: VistaResuelta): Record<string, unknown> {
+function claveDeConexiones(vista: ResolvedView): Record<string, unknown> {
   switch (vista.type) {
     case 'sequence': {
       const { messages, items, groups } = vista.interaction;
       return {
         aristas: [],
-        mensajes: messages.map((m) => [m.ruta, m.kind, m.from, m.to, m.label]),
+        mensajes: messages.map((m) => [m.path, m.kind, m.from, m.to, m.label]),
         fragmentos: claveDeFragmentos(items),
-        grupos: groups?.map((g) => [g.id, g.label, g.nivel, g.lifelines]),
+        grupos: groups?.map((g) => [g.id, g.label, g.level, g.lifelines]),
       };
     }
     case 'architecture':
     case 'flow':
     case 'er':
-      return { aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]) };
+      return { aristas: vista.edges.map((arista) => [edgeId(arista), arista.label]) };
   }
 }
 
 /** Estructura de los Fragmentos (operador, guardas y a que Mensajes cubren) para la clave de layout. */
-function claveDeFragmentos(items: readonly ItemResuelto[]): unknown[] {
+function claveDeFragmentos(items: readonly ResolvedItem[]): unknown[] {
   return items.flatMap((item): unknown[] => {
     if (item.type === 'message') return [];
-    if (item.type === 'note') return [[item.ruta, 'note', item.anchor, item.targets, item.text]];
-    if (item.type === 'ref') return [[item.ruta, 'ref', item.title, item.participantes]];
-    return [[item.ruta, item.operator, item.operands.map((o) => [o.guard, o.items.map((i) => (i.type === 'message' ? i.message.ruta : claveDeFragmentos([i])))])]];
+    if (item.type === 'note') return [[item.path, 'note', item.anchor, item.targets, item.text]];
+    if (item.type === 'ref') return [[item.path, 'ref', item.title, item.participants]];
+    return [[item.path, item.operator, item.operands.map((o) => [o.guard, o.items.map((i) => (i.type === 'message' ? i.message.path : claveDeFragmentos([i])))])]];
   });
 }

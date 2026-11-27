@@ -2,14 +2,14 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { INSPECT_CONTRACT_VERSION, salidaDeInspectSchema } from 'canonico';
+import { INSPECT_CONTRACT_VERSION, inspectOutputSchema } from 'canonical';
 import { run } from 'cli';
 
 const RAIZ = resolve(__dirname, 'fixtures/tema-cli');
 
 async function json(args: string[], raiz = RAIZ) {
   const r = await run(['inspect', 'theme', ...args, '--workspace', raiz, '--json']);
-  return { ...r, salida: r.stdout === '' ? undefined : salidaDeInspectSchema.parse(JSON.parse(r.stdout)) };
+  return { ...r, salida: r.stdout === '' ? undefined : inspectOutputSchema.parse(JSON.parse(r.stdout)) };
 }
 
 const temaDe = (salida: Awaited<ReturnType<typeof json>>['salida']) => {

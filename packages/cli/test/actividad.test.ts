@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { ACTIVIDAD_CONTRACT_VERSION, eventoDeActividadSchema } from 'canonico';
-import type { EventoDeActividad } from 'canonico';
+import { ACTIVITY_CONTRACT_VERSION, activityEventSchema } from 'canonical';
+import type { ActivityEvent } from 'canonical';
 import { run } from 'cli';
 
 const DG = `specification { node servicio }
@@ -38,12 +38,12 @@ function workspace(texto = DG): string {
 
 const registro = (raiz: string) => join(raiz, '.diagrams', 'activity.jsonl');
 
-function eventos(raiz: string): EventoDeActividad[] {
+function eventos(raiz: string): ActivityEvent[] {
   if (!existsSync(registro(raiz))) return [];
   return readFileSync(registro(raiz), 'utf8')
     .split('\n')
     .filter((linea) => linea !== '')
-    .map((linea) => eventoDeActividadSchema.parse(JSON.parse(linea)));
+    .map((linea) => activityEventSchema.parse(JSON.parse(linea)));
 }
 
 /** Activo: el entorno de las pruebas del paquete lo apaga por defecto. */
@@ -58,7 +58,7 @@ describe('Registro de actividad', () => {
     const [evento, ...resto] = eventos(raiz);
     expect(resto).toEqual([]);
     expect(evento).toMatchObject({
-      contractVersion: ACTIVIDAD_CONTRACT_VERSION,
+      contractVersion: ACTIVITY_CONTRACT_VERSION,
       pid: process.pid,
       command: 'validate',
       args: ['--workspace', raiz, '--json'],

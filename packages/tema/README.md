@@ -13,7 +13,7 @@ Catalog of Primitives and Slots, schema of the resolved Theme and Resolved style
 - Does not measure text in the browser nor decide whether a warning blocks: that is `shell` and `sesion`.
 
 ## Depends on
-`canonico` (Model types and constants, `CODIGOS` and `candidatosCercanos`). External dependency: `zod`.
+`canonical` (Model types and constants, `CODES` and `nearestCandidates`). External dependency: `zod`.
 
 ## Entry file
 `packages/tema/src/index.ts` (the header documents the full interface).

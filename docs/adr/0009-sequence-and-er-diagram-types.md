@@ -114,7 +114,7 @@ Severities and codes fixed here (codes in "Issue codes").
 
 ### Issue codes
 
-The parser accepts the general form (Fragment operands, View properties, `show`/`hide`, `link`) and `canonico` emits the specific code; none of this comes out as `syntax-error`. `fix` only with a single candidate (ADR 0005); otherwise, `hint`.
+The parser accepts the general form (Fragment operands, View properties, `show`/`hide`, `link`) and `canonical` emits the specific code; none of this comes out as `syntax-error`. `fix` only with a single candidate (ADR 0005); otherwise, `hint`.
 
 | Rule | Code | Severity | Help |
 | --- | --- | --- | --- |
@@ -185,7 +185,7 @@ Lifeline header (Node entry with its `diagram sequence` patch), `activation.widt
   - Activations derived from the `sync`/`reply` stack; each nested level shifts by `activation.width/2`; arrows end at the edge of the activation.
   - Fragment frame: the Lifelines its content covers plus padding; for `ref`, the participants of the referenced Interaction present in the View, or all of them if there are none in common.
   - Message label centered above the arrow; for the self message, to the right of the loop.
-- **Key and cache**: `claveDeLayout` and `claveDeEstructura` include `vista.type`; in sequence, also the items of the projected Interaction (endpoints, kind and labels after `depth`/`exclude`), `order` and `autonumber` (it changes the labels); no Pins. The new Metrics enter through the existing path. `geometriaCacheadaSchema` validates the union; an older JSON without `kind` is read as `grafo`.
+- **Key and cache**: `claveDeLayout` and `claveDeEstructura` include `vista.type`; in sequence, also the items of the projected Interaction (endpoints, kind and labels after `depth`/`exclude`), `order` and `autonumber` (it changes the labels); no Pins. The new Metrics enter through the existing path. `cachedGeometrySchema` validates the union; an older JSON without `kind` is read as `grafo`.
 - **Performance**: new scenario `secuencia-grande` in `pnpm bench`: 1000 Messages, 50 Lifelines, Fragments nested 3 levels, budget 500 ms.
 
 ## Consequences

@@ -20,7 +20,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
 /** Orden de dependencias (ADR 0004): un paquete solo importa de los anteriores. */
-export const CADENA = ['canonico', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'estudio', 'cli'] as const;
+export const CADENA = ['canonical', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'estudio', 'cli'] as const;
 
 /**
  * Subpaths publicos ademas de `.` (ADR 0004, enmienda `estudio`): `protocolo` es el contrato de `dev` del que `cli`
@@ -56,7 +56,7 @@ export const CARPETAS_DE_RAIZ = ['scripts', 'bench'] as const;
 const RAIZ = '(raiz)';
 
 /** Nucleo puro: sin I/O, sin reloj, sin estado global. */
-export const NUCLEO = ['canonico', 'tema', 'dsl', 'sesion', 'render'] as const;
+export const NUCLEO = ['canonical', 'tema', 'dsl', 'sesion', 'render'] as const;
 
 const IMPUREZAS: ReadonlyArray<readonly [RegExp, string]> = [
   [/\bnew Date\b|\bDate\.now\b|\bperformance\.now\b/, 'reloj'],

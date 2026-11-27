@@ -44,7 +44,7 @@ function crearWorkspace(archivos: Record<string, string>): string {
 
 describe('revisarWorkspace', () => {
   it('usa la cadena de dependencias de ADR 0004', () => {
-    expect(CADENA).toEqual(['canonico', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'estudio', 'cli']);
+    expect(CADENA).toEqual(['canonical', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'estudio', 'cli']);
   });
 
   it('estudio queda fuera del nucleo puro (usa DOM, fetch y EventSource)', () => {
@@ -53,25 +53,25 @@ describe('revisarWorkspace', () => {
 
   it('falla si un paquete importa de uno posterior en la cadena', () => {
     const raiz = crearWorkspace({
-      'packages/canonico/package.json': manifiesto('canonico'),
-      'packages/canonico/src/index.ts': "import { algo } from 'dsl';\nexport const propio = algo;\n",
+      'packages/canonical/package.json': manifiesto('canonical'),
+      'packages/canonical/src/index.ts': "import { algo } from 'dsl';\nexport const propio = algo;\n",
       'packages/dsl/package.json': manifiesto('dsl'),
       'packages/dsl/src/index.ts': 'export const algo = 1;\n',
     });
 
     expect(revisarWorkspace(raiz)).toContainEqual(
-      expect.objectContaining({ paquete: 'canonico', regla: 'orden' }),
+      expect.objectContaining({ paquete: 'canonical', regla: 'orden' }),
     );
   });
 
   it('falla si un paquete importa un archivo interno de otro paquete', () => {
     const raiz = crearWorkspace({
-      'packages/canonico/package.json': manifiesto('canonico'),
-      'packages/canonico/src/index.ts': 'export const tipo = 1;\n',
-      'packages/canonico/src/tipos.ts': 'export const interno = 2;\n',
+      'packages/canonical/package.json': manifiesto('canonical'),
+      'packages/canonical/src/index.ts': 'export const tipo = 1;\n',
+      'packages/canonical/src/tipos.ts': 'export const interno = 2;\n',
       'packages/layout/package.json': manifiesto('layout'),
       'packages/layout/src/index.ts':
-        "import { interno } from 'canonico/src/tipos';\nexport const propio = interno;\n",
+        "import { interno } from 'canonical/src/tipos';\nexport const propio = interno;\n",
     });
 
     expect(revisarWorkspace(raiz)).toContainEqual(
@@ -94,17 +94,17 @@ describe('revisarWorkspace', () => {
 
   it('falla si exports expone algo mas alla de la entrada raiz', () => {
     const raiz = crearWorkspace({
-      'packages/canonico/package.json': manifiesto('canonico', {
+      'packages/canonical/package.json': manifiesto('canonical', {
         exports: {
           '.': { types: './dist/index.d.ts', import: './dist/index.js' },
           './interno': './dist/interno.js',
         },
       }),
-      'packages/canonico/src/index.ts': 'export const algo = 1;\n',
+      'packages/canonical/src/index.ts': 'export const algo = 1;\n',
     });
 
     expect(revisarWorkspace(raiz)).toContainEqual(
-      expect.objectContaining({ paquete: 'canonico', regla: 'exports' }),
+      expect.objectContaining({ paquete: 'canonical', regla: 'exports' }),
     );
   });
 
@@ -130,26 +130,26 @@ describe('revisarWorkspace', () => {
 
   it('falla si un paquete no declara exports', () => {
     const raiz = crearWorkspace({
-      'packages/canonico/package.json': JSON.stringify({
-        name: 'canonico',
+      'packages/canonical/package.json': JSON.stringify({
+        name: 'canonical',
         version: '0.0.0',
         private: true,
         type: 'module',
       }),
-      'packages/canonico/src/index.ts': 'export const algo = 1;\n',
+      'packages/canonical/src/index.ts': 'export const algo = 1;\n',
     });
 
     expect(revisarWorkspace(raiz)).toContainEqual(
-      expect.objectContaining({ paquete: 'canonico', regla: 'exports' }),
+      expect.objectContaining({ paquete: 'canonical', regla: 'exports' }),
     );
   });
 
   it('falla si un paquete importa otro del workspace sin declararlo', () => {
     const raiz = crearWorkspace({
-      'packages/canonico/package.json': manifiesto('canonico'),
-      'packages/canonico/src/index.ts': 'export const algo = 1;\n',
+      'packages/canonical/package.json': manifiesto('canonical'),
+      'packages/canonical/src/index.ts': 'export const algo = 1;\n',
       'packages/dsl/package.json': manifiesto('dsl'),
-      'packages/dsl/src/index.ts': "import { algo } from 'canonico';\nexport const propio = algo;\n",
+      'packages/dsl/src/index.ts': "import { algo } from 'canonical';\nexport const propio = algo;\n",
     });
 
     expect(revisarWorkspace(raiz)).toContainEqual(
@@ -170,26 +170,26 @@ describe('revisarWorkspace', () => {
 
   it('scanner sits outside the chain: only cli imports it and it imports no workspace package', () => {
     const raiz = crearWorkspace({
-      'packages/canonico/package.json': manifiesto('canonico', { dependencies: { scanner: 'workspace:*' } }),
-      'packages/canonico/src/index.ts': "import { scan } from 'scanner';\nexport const s = scan;\n",
-      'packages/scanner/package.json': manifiesto('scanner', { dependencies: { canonico: 'workspace:*' } }),
-      'packages/scanner/src/index.ts': "import { algo } from 'canonico';\nexport const scan = algo;\n",
+      'packages/canonical/package.json': manifiesto('canonical', { dependencies: { scanner: 'workspace:*' } }),
+      'packages/canonical/src/index.ts': "import { scan } from 'scanner';\nexport const s = scan;\n",
+      'packages/scanner/package.json': manifiesto('scanner', { dependencies: { canonical: 'workspace:*' } }),
+      'packages/scanner/src/index.ts': "import { algo } from 'canonical';\nexport const scan = algo;\n",
       'packages/cli/package.json': manifiesto('cli', { dependencies: { scanner: 'workspace:*' } }),
       'packages/cli/src/index.ts': "import { scan } from 'scanner';\nexport const s = scan;\n",
     });
 
     expect(revisarWorkspace(raiz).map((v) => [v.paquete, v.regla])).toEqual([
-      ['canonico', 'aislado'],
+      ['canonical', 'aislado'],
       ['scanner', 'aislado'],
     ]);
   });
 
   it('acepta un import legal por nombre, declarado y hacia un paquete anterior', () => {
     const raiz = crearWorkspace({
-      'packages/canonico/package.json': manifiesto('canonico'),
-      'packages/canonico/src/index.ts': 'export const algo = 1;\n',
-      'packages/dsl/package.json': manifiesto('dsl', { dependencies: { canonico: 'workspace:*' } }),
-      'packages/dsl/src/index.ts': "import { algo } from 'canonico';\nexport const propio = algo;\n",
+      'packages/canonical/package.json': manifiesto('canonical'),
+      'packages/canonical/src/index.ts': 'export const algo = 1;\n',
+      'packages/dsl/package.json': manifiesto('dsl', { dependencies: { canonical: 'workspace:*' } }),
+      'packages/dsl/src/index.ts': "import { algo } from 'canonical';\nexport const propio = algo;\n",
     });
 
     expect(revisarWorkspace(raiz)).toEqual([]);
@@ -197,11 +197,11 @@ describe('revisarWorkspace', () => {
 
   it('ignora los import que solo aparecen en comentarios', () => {
     const raiz = crearWorkspace({
-      'packages/canonico/package.json': manifiesto('canonico'),
-      'packages/canonico/src/index.ts':
+      'packages/canonical/package.json': manifiesto('canonical'),
+      'packages/canonical/src/index.ts':
         "// un dia importare de 'dsl'\n" +
         "/* y tambien from 'layout' */\n" +
-        "export const paquete = 'canonico';\n",
+        "export const paquete = 'canonical';\n",
     });
 
     expect(revisarWorkspace(raiz)).toEqual([]);
@@ -224,12 +224,12 @@ describe('revisarWorkspace', () => {
 
   it('falla si un paquete reexporta nombres de otro paquete, tambien en bloques de varias lineas', () => {
     const raiz = crearWorkspace({
-      'packages/canonico/package.json': manifiesto('canonico'),
-      'packages/canonico/src/index.ts': 'export const algo = 1;\nexport type Caja = { x: number };\n',
-      'packages/layout/package.json': manifiesto('layout', { dependencies: { canonico: 'workspace:*' } }),
-      'packages/layout/src/index.ts': "export { algo } from 'canonico';\n",
-      'packages/layout/src/tipos.ts': "export type {\n  Caja,\n} from 'canonico';\n",
-      'packages/layout/src/todo.ts': "export * from 'canonico';\n",
+      'packages/canonical/package.json': manifiesto('canonical'),
+      'packages/canonical/src/index.ts': 'export const algo = 1;\nexport type Caja = { x: number };\n',
+      'packages/layout/package.json': manifiesto('layout', { dependencies: { canonical: 'workspace:*' } }),
+      'packages/layout/src/index.ts': "export { algo } from 'canonical';\n",
+      'packages/layout/src/tipos.ts': "export type {\n  Caja,\n} from 'canonical';\n",
+      'packages/layout/src/todo.ts': "export * from 'canonical';\n",
     });
 
     const reexportes = revisarWorkspace(raiz).filter((v) => v.regla === 'reexporte');
@@ -242,17 +242,17 @@ describe('revisarWorkspace', () => {
 
   it('acepta reexportes propios y los de las excepciones: estudio/protocolo y la fachada de shell', () => {
     const raiz = crearWorkspace({
-      'packages/canonico/package.json': manifiesto('canonico'),
-      'packages/canonico/src/index.ts': "export { algo } from './algo';\n",
-      'packages/canonico/src/algo.ts': 'export const algo = 1;\n',
-      'packages/shell/package.json': manifiesto('shell', { dependencies: { canonico: 'workspace:*' } }),
-      'packages/shell/src/index.ts': "export { algo } from 'canonico';\n",
+      'packages/canonical/package.json': manifiesto('canonical'),
+      'packages/canonical/src/index.ts': "export { algo } from './algo';\n",
+      'packages/canonical/src/algo.ts': 'export const algo = 1;\n',
+      'packages/shell/package.json': manifiesto('shell', { dependencies: { canonical: 'workspace:*' } }),
+      'packages/shell/src/index.ts': "export { algo } from 'canonical';\n",
       'packages/estudio/package.json': manifiesto('estudio', {
-        dependencies: { canonico: 'workspace:*' },
+        dependencies: { canonical: 'workspace:*' },
         exports: { '.': './dist/index.js', './protocolo': './dist/protocolo.js' },
       }),
       'packages/estudio/src/index.ts': 'export const app = 1;\n',
-      'packages/estudio/src/protocolo.ts': "export type { algo } from 'canonico';\n",
+      'packages/estudio/src/protocolo.ts': "export type { algo } from 'canonical';\n",
     });
 
     expect(revisarWorkspace(raiz)).toEqual([]);
@@ -312,12 +312,12 @@ describe('manifiestos de este workspace', () => {
 
   it('falla si el nucleo importa Node o usa reloj, y deja pasar tests y adaptadores', () => {
     const raiz = crearWorkspace({
-      'packages/canonico/package.json': manifiesto('canonico'),
-      'packages/canonico/src/index.ts':
+      'packages/canonical/package.json': manifiesto('canonical'),
+      'packages/canonical/src/index.ts':
         "import { readFileSync } from 'node:fs';\nexport const t = Date.now();\n",
-      'packages/canonico/test/a.test.ts': "import 'node:fs';\nexport const t = Date.now();\n",
+      'packages/canonical/test/a.test.ts': "import 'node:fs';\nexport const t = Date.now();\n",
       'packages/layout/package.json': manifiesto('layout', {
-        dependencies: { canonico: 'workspace:*' },
+        dependencies: { canonical: 'workspace:*' },
       }),
       'packages/layout/src/index.ts': "import 'node:fs';\nexport const t = Date.now();\n",
     });
@@ -325,17 +325,17 @@ describe('manifiestos de este workspace', () => {
     const pureza = revisarWorkspace(raiz).filter((v) => v.regla === 'pureza');
 
     expect(pureza.map((v) => `${v.paquete}:${v.archivo}`)).toEqual([
-      'canonico:packages/canonico/src/index.ts',
-      'canonico:packages/canonico/src/index.ts',
+      'canonical:packages/canonical/src/index.ts',
+      'canonical:packages/canonical/src/index.ts',
     ]);
   });
 
-  it('el paquete tema esta en el nucleo puro y solo puede importar de canonico', () => {
+  it('el paquete tema esta en el nucleo puro y solo puede importar de canonical', () => {
     const raiz = crearWorkspace({
-      'packages/canonico/package.json': manifiesto('canonico'),
-      'packages/canonico/src/index.ts': 'export const a = 1;\n',
-      'packages/tema/package.json': manifiesto('tema', { dependencies: { canonico: 'workspace:*' } }),
-      'packages/tema/src/index.ts': "import { a } from 'canonico';\nexport const t = a + Math.random();\n",
+      'packages/canonical/package.json': manifiesto('canonical'),
+      'packages/canonical/src/index.ts': 'export const a = 1;\n',
+      'packages/tema/package.json': manifiesto('tema', { dependencies: { canonical: 'workspace:*' } }),
+      'packages/tema/src/index.ts': "import { a } from 'canonical';\nexport const t = a + Math.random();\n",
       'packages/dsl/package.json': manifiesto('dsl'),
       'packages/dsl/src/index.ts': "import { t } from 'tema';\nexport const d = t;\n",
     });

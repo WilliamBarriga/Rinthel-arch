@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { idDeArista } from 'canonico';
+import { edgeId } from 'canonical';
 import { layoutView } from 'layout';
 import { abrirSesion, crearHistorial, deshacer, editarEnHistorial } from 'sesion';
 import type { Historial, Intencion } from 'sesion';
@@ -176,7 +176,7 @@ describe('ER: Pasos', () => {
       return v === null || v === undefined || v === '' ? '1' : v;
     };
     const paso = () => fireEvent.click(screen.getByRole('button', { name: 'Next step' }));
-    const idFk = idDeArista(fuente.model.edges[0]!);
+    const idFk = edgeId(fuente.model.edges[0]!);
     const atras = () => fireEvent.click(screen.getByRole('button', { name: 'Previous step' }));
     // Entra en el Paso 1: el Paso 0 la dejaria vacia.
     expect(container.querySelector('[data-pasos]')?.textContent).toContain('Step 1 of 2');

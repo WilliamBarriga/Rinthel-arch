@@ -6,7 +6,7 @@
  */
 import type { ReactElement, ReactNode } from 'react';
 
-import type { FuenteCanonica, Nodo, Vista } from 'canonico';
+import type { CanonicalForm, Node, View } from 'canonical';
 
 import { abrirCodigoEnBloque } from '../comandos/registro';
 import type { ContextoDelEstudio } from '../marco/contexto';
@@ -28,7 +28,7 @@ const ISLA_DERECHA = '#ui-isla-derecha';
 
 const Dato = ({ children }: { children: ReactNode }): ReactElement => <code className="ui-tour-dato">{children}</code>;
 
-function tituloDeNodo(nodos: readonly Nodo[], id: string): string | undefined {
+function tituloDeNodo(nodos: readonly Node[], id: string): string | undefined {
   for (const n of nodos) {
     if (n.id === id) return n.title;
     const hijo = tituloDeNodo(n.children, id);
@@ -38,17 +38,17 @@ function tituloDeNodo(nodos: readonly Nodo[], id: string): string | undefined {
 }
 
 /** "2 architecture and 1 flow", in declaration order of the Diagram types. */
-function vistasPorTipo(vistas: readonly Vista[]): string {
+function vistasPorTipo(vistas: readonly View[]): string {
   const cuenta = new Map<string, number>();
   for (const v of vistas) cuenta.set(v.type, (cuenta.get(v.type) ?? 0) + 1);
   const partes = [...cuenta].map(([tipo, n]) => `${n} ${tipo}`);
   return partes.length < 2 ? (partes[0] ?? '') : `${partes.slice(0, -1).join(', ')} and ${partes[partes.length - 1]!}`;
 }
 
-const preferida = (vistas: readonly Vista[], tipo: string): Vista | undefined => vistas.find((v) => v.type === tipo) ?? vistas[0];
+const preferida = (vistas: readonly View[], tipo: string): View | undefined => vistas.find((v) => v.type === tipo) ?? vistas[0];
 
 /** The script for the Workspace `fuente` (`undefined` if it never compiled), its active View and the mode. */
-export function paradasDelTour(fuente: FuenteCanonica | undefined, vistaActiva: string | undefined, modo: ModoDelEstudio): readonly ParadaDelTour[] {
+export function paradasDelTour(fuente: CanonicalForm | undefined, vistaActiva: string | undefined, modo: ModoDelEstudio): readonly ParadaDelTour[] {
   const vistas = fuente?.views ?? [];
   const activa = vistas.find((v) => v.id === vistaActiva);
   const conLink = preferida(vistas.filter((v) => v.links.length > 0), 'architecture');

@@ -8,7 +8,7 @@ import { Switch } from '@base-ui/react/switch';
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 
-import type { ObjetivoDeActividad } from 'canonico';
+import type { ActivityTarget } from 'canonical';
 
 import { useEstudio } from '../marco/contexto';
 import { destinoDelObjetivo, resumenDelEvento, useActividadDelAgente } from './actividad';
@@ -43,7 +43,7 @@ export function UltimaLineaDelAgente(): ReactElement {
 export function SeguirAlAgente(): ReactElement {
   const { cliente, fuente, vista, irAVista, seleccionar } = useEstudio();
   const { almacen, instantanea } = useActividadDelAgente(cliente);
-  const [pendiente, setPendiente] = useState<{ objetivo: ObjetivoDeActividad }>();
+  const [pendiente, setPendiente] = useState<{ objetivo: ActivityTarget }>();
 
   useEffect(
     () =>

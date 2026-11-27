@@ -5,7 +5,7 @@
  */
 import type { ComponentType } from 'react';
 import type { CapaPintada, PinturaDeNodo } from 'tema';
-import type { NodoResuelto } from 'canonico';
+import type { ResolvedNode } from 'canonical';
 
 import { limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
@@ -41,7 +41,7 @@ const congelar = <T extends object>(valor: T): Readonly<T> => Object.freeze(valo
 export function pintarCodigo(
   estilo: Estilo,
   pila: Pick<PinturaDeNodo, 'capas' | 'estados'>,
-  datos: { nodo: NodoResuelto; ancho: number; alto: number; trazo: string; estados: readonly string[]; tieneContenido: boolean; componentes: ComponentesDeTema | undefined },
+  datos: { nodo: ResolvedNode; ancho: number; alto: number; trazo: string; estados: readonly string[]; tieneContenido: boolean; componentes: ComponentesDeTema | undefined },
   encima: boolean,
 ): Elemento[] {
   const { nodo, ancho, alto, trazo, estados, tieneContenido, componentes } = datos;

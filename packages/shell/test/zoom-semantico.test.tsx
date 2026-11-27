@@ -1,15 +1,15 @@
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
-import type { Geometria, VistaResuelta } from 'canonico';
+import { canonicalFormSchema } from 'canonical';
+import type { Geometry, ResolvedView } from 'canonical';
 import { VistaInteractiva, nivelDeDetalle } from 'shell';
 import type { AdaptadorDeLayout, Camara } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
 
 afterEach(cleanup);
 
-const fuente = fuenteCanonicaSchema.parse({
+const fuente = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'tabla', icon: 'database' }, { name: 'grupo' }] },
   model: {
     nodes: [
@@ -28,8 +28,8 @@ const fuente = fuenteCanonicaSchema.parse({
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], overrides: [{ node: 'g.u', label: 'Usr' }] }],
 });
 
-const fijo: AdaptadorDeLayout = async (vista: VistaResuelta) => {
-  const nodes: Geometria['nodes'] = { g: { x: 0, y: 0, width: 400, height: 200 } };
+const fijo: AdaptadorDeLayout = async (vista: ResolvedView) => {
+  const nodes: Geometry['nodes'] = { g: { x: 0, y: 0, width: 400, height: 200 } };
   for (const hijo of vista.nodes[0]!.children) nodes[hijo.id] = { x: 20, y: 40, width: 200, height: 100 };
   return { nodes, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 400, height: 200 };
 };

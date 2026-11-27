@@ -172,9 +172,9 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.1
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:packages/canonico
+        version: link:packages/canonical
       cli:
         specifier: workspace:*
         version: link:packages/cli
@@ -218,7 +218,7 @@ importers:
         specifier: ^4.1.11
         version: 4.1.12(@types/node@24.19.1)(jsdom@30.1.2)(vite@7.3.7(@types/node@24.19.1))
 
-  packages/canonico:
+  packages/canonical:
     dependencies:
       zod:
         specifier: ^4.6.6
@@ -236,9 +236,9 @@ importers:
 
   packages/cli:
     dependencies:
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       dsl:
         specifier: workspace:*
         version: link:../dsl
@@ -285,9 +285,9 @@ importers:
 
   packages/dsl:
     dependencies:
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       langium:
         specifier: ^4.4.0
         version: 4.4.0
@@ -337,9 +337,9 @@ importers:
       '@lezer/highlight':
         specifier: 1.2.5
         version: 1.2.5
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       layout:
         specifier: workspace:*
         version: link:../layout
@@ -392,9 +392,9 @@ importers:
 
   packages/layout:
     dependencies:
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       elkjs:
         specifier: 0.12.0
         version: 0.12.0
@@ -414,9 +414,9 @@ importers:
 
   packages/render:
     dependencies:
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       layout:
         specifier: workspace:*
         version: link:../layout
@@ -476,9 +476,9 @@ importers:
 
   packages/sesion:
     dependencies:
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       dsl:
         specifier: workspace:*
         version: link:../dsl
@@ -501,9 +501,9 @@ importers:
 
   packages/shell:
     dependencies:
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       d3-selection:
         specifier: 3.0.0
         version: 3.0.0
@@ -562,9 +562,9 @@ importers:
 
   packages/tema:
     dependencies:
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       zod:
         specifier: ^4.6.6
         version: 4.6.6

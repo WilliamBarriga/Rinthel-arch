@@ -1,5 +1,5 @@
 import { ChangeSet, Text } from '@codemirror/state';
-import { hashDeContenido } from 'canonico';
+import { contentHash } from 'canonical';
 import { describe, expect, it } from 'vitest';
 
 import type { ResultadoDeEnvio } from '../navegador/cliente';
@@ -83,7 +83,7 @@ describe('guardador frente a escrituras externas', () => {
     const f = discoFalso(BASE);
     f.teclear('"Base"', '"Postgres"');
     await f.guardador.guardar();
-    await f.guardador.sincronizar({ hash: hashDeContenido(f.disco.texto), version: f.disco.version });
+    await f.guardador.sincronizar({ hash: contentHash(f.disco.texto), version: f.disco.version });
     expect(f.lecturas()).toBe(0);
     expect(f.fusiones).toEqual([]);
   });
@@ -91,7 +91,7 @@ describe('guardador frente a escrituras externas', () => {
   it('un cambio externo con el buffer limpio llega al buffer con cambios minimos y no se reenvia', async () => {
     const f = discoFalso(BASE);
     f.escribirFuera(BASE.replace('"API"', '"Gateway"'));
-    await f.guardador.sincronizar({ hash: hashDeContenido(f.disco.texto), version: f.disco.version });
+    await f.guardador.sincronizar({ hash: contentHash(f.disco.texto), version: f.disco.version });
     expect(f.buffer()).toBe(f.disco.texto);
     expect(f.fusiones).toHaveLength(1);
     expect(f.enviados).toEqual([]);
@@ -101,7 +101,7 @@ describe('guardador frente a escrituras externas', () => {
   it('otro archivo que cambia (solo sube la version) actualiza la version base sin leer este', async () => {
     const f = discoFalso(BASE);
     f.disco.version = 5;
-    await f.guardador.sincronizar({ hash: hashDeContenido(BASE), version: 5 });
+    await f.guardador.sincronizar({ hash: contentHash(BASE), version: 5 });
     f.teclear('"Base"', '"Postgres"');
     await f.guardador.guardar();
     expect(f.lecturas()).toBe(0);

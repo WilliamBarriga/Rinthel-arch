@@ -8,8 +8,8 @@ model {
   package repo "rinthel-arch" "The monorepo root: repo scripts, repo-wide tests and benchmarks" {
     source { path "." }
 
-    package canonical "canonico" "Canonical form: Zod schema, validation, View resolution, Steps, Pins and queries" {
-      source { path "packages/canonico"  path "packages/canonico/src" }
+    package canonical "canonical" "Canonical form: Zod schema, validation, View resolution, Steps, Pins and queries" {
+      source { path "packages/canonical"  path "packages/canonical/src" }
     }
     package dsl "dsl" "Text to Canonical form with Langium; Workspace merge and Theme compiler" {
       source { path "packages/dsl"  path "packages/dsl/src"  path "packages/dsl/src/gramatica" }

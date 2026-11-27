@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView } from 'canonico';
-import type { Tema, VistaResuelta } from 'canonico';
+import { canonicalFormSchema, resolveView } from 'canonical';
+import type { Theme, ResolvedView } from 'canonical';
 import { layoutView } from 'layout';
 import { aHtml, etiquetaCon, hojaDe, propiedad } from './ayudas';
 import { TEMA_NEUTRO, construirPrimitiva } from 'tema';
 
 const nodo = (id: string, title: string, children: unknown[] = []) => ({ id, type: 'servicio', title, description: '', children });
 
-function vista(titulo = 'Base', colapsado = false): VistaResuelta {
-  const fuente = fuenteCanonicaSchema.parse({
+function vista(titulo = 'Base', colapsado = false): ResolvedView {
+  const fuente = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio', color: 'blue' }] },
     model: { nodes: [nodo('a', 'Plataforma', [nodo('a.api', 'API')]), nodo('db', titulo)], edges: [{ from: { node: 'a.api' }, to: { node: 'db' } }] },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], overrides: [] }],
@@ -23,13 +23,13 @@ const capa = (nombre: string, tipo: string, props: Record<string, string | numbe
   if (primitiva === undefined) throw new Error(errores.map((e) => e.mensaje).join('; '));
   return { nombre, primitiva: { tipo, props: primitiva.props } };
 };
-const conCapas = (capas: ReturnType<typeof capa>[], seed?: string): Tema => ({
+const conCapas = (capas: ReturnType<typeof capa>[], seed?: string): Theme => ({
   ...TEMA_NEUTRO,
   tokens: { ...TEMA_NEUTRO.tokens, ...(seed !== undefined && { seed }) },
   nodo: { ...TEMA_NEUTRO.nodo, capas },
 });
 
-async function dibujar(tema: Tema, v = vista()): Promise<string> {
+async function dibujar(tema: Theme, v = vista()): Promise<string> {
   return aHtml({ view: v, geometry: await layoutView(v, tema), theme: tema, width: 800, height: 600 });
 }
 
@@ -117,7 +117,7 @@ describe('trazo de Arista a mano alzada', () => {
     if (primitiva === undefined) throw new Error(errores.map((e) => e.mensaje).join('; '));
     return { nombre: 'linea', primitiva };
   };
-  const conTrazo = (props: Record<string, string | number>): Tema => ({ ...TEMA_NEUTRO, arista: { ...TEMA_NEUTRO.arista, capas: [linea({ color: 'blue', ...props })] } });
+  const conTrazo = (props: Record<string, string | number>): Theme => ({ ...TEMA_NEUTRO, arista: { ...TEMA_NEUTRO.arista, capas: [linea({ color: 'blue', ...props })] } });
   const aristas = (html: string): string => /data-capa="aristas"[\s\S]*?<\/svg>/.exec(html)?.[0] ?? '';
 
   it('roughness desplaza el trazo con un filtro de ruido en el lienzo, que no desaparece en tramos rectos', async () => {

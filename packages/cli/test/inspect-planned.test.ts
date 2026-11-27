@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { salidaDeInspectSchema } from 'canonico';
+import { inspectOutputSchema } from 'canonical';
 import { run } from 'cli';
 
 const WORKSPACE = `specification {
@@ -49,7 +49,7 @@ describe('inspect planned', () => {
     const r = await run(['inspect', 'planned', '--workspace', workspace(), '--json']);
 
     expect(r.exitCode, r.stderr).toBe(0);
-    const salida = salidaDeInspectSchema.parse(JSON.parse(r.stdout));
+    const salida = inspectOutputSchema.parse(JSON.parse(r.stdout));
     expect(salida).toEqual({
       contractVersion: 2,
       command: 'planned',

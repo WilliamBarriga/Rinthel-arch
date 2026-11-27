@@ -1,7 +1,7 @@
 /**
  * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve la app de `estudio` (`/` y `/_estudio/*`, leidos del disco en
  * cada peticion y con `no-store`), el estado y la Geometria por Vista, y serializa por SSE (`/eventos`) la instantanea de
- * conexion y el flujo de eventos del Workspace vivo (la secuencia es de `sesion`; el protocolo, de `canonico`).
+ * conexion y el flujo de eventos del Workspace vivo (la secuencia es de `sesion`; el protocolo, de `canonical`).
  * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); todo POST exige
  * un `Origin` propio (o ninguno, si no 403) y `application/json` (si no 415); un cuerpo de mas de 64 KiB es 413;
  * `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
@@ -18,8 +18,8 @@ import { readFileSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { RUTAS_DE_DEV } from 'canonico';
-import type { EventoDeDev } from 'canonico';
+import { DEV_ROUTES } from 'canonical';
+import type { DevEvent } from 'canonical';
 import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
 import type { ActivosDelEstudio } from 'estudio';
 import { abrirWorkspaceVivo, atenderApiDeDev } from 'sesion';
@@ -124,7 +124,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 
   const clientes = new Set<ServerResponse>();
   /** La secuencia de eventos es del Workspace vivo; aqui solo se serializa como SSE. */
-  const enviar = (cliente: ServerResponse, { nombre, datos }: EventoDeDev): void => void cliente.write(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`);
+  const enviar = (cliente: ServerResponse, { name: nombre, data: datos }: DevEvent): void => void cliente.write(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`);
   const dejarDeEscuchar = vivo.escuchar((evento) => {
     for (const cliente of clientes) enviar(cliente, evento);
   });
@@ -181,8 +181,8 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       const { archivos } = estudio();
       const nombre = ruta.slice(RUTA_DEL_ESTUDIO.length);
       servirEstatico(res, Object.hasOwn(archivos, nombre) ? archivos[nombre] : undefined);
-    } else if (ruta.startsWith(RUTAS_DE_DEV.fuentes)) {
-      const fuente = servirFuente(ruta.slice(RUTAS_DE_DEV.fuentes.length));
+    } else if (ruta.startsWith(DEV_ROUTES.fonts)) {
+      const fuente = servirFuente(ruta.slice(DEV_ROUTES.fonts.length));
       if (fuente === undefined) {
         cabecera(res, 'text/plain', 404);
         res.end('Not found');
@@ -190,7 +190,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
         res.writeHead(200, { 'content-type': fuente.tipo, 'cache-control': 'no-store', 'content-length': fuente.bytes.length });
         res.end(fuente.bytes);
       }
-    } else if (ruta === RUTAS_DE_DEV.eventos) {
+    } else if (ruta === DEV_ROUTES.events) {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
       clientes.add(res);
       res.on('close', () => clientes.delete(res));

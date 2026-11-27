@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { geometriaCacheadaSchema } from 'canonico';
+import { cachedGeometrySchema } from 'canonical';
 import { abrirSesion } from 'sesion';
 
 const texto = `specification { node servicio }
@@ -24,13 +24,13 @@ view arq { type architecture
  include * }
 `;
 
-describe('seam sesion: la Geometria cacheada cumple el esquema de canonico', () => {
+describe('seam sesion: la Geometria cacheada cumple el esquema de canonical', () => {
   for (const vista of ['seq', 'arq']) {
     it(`la Geometria de la Vista ${vista} valida y no pierde campos al leerla del JSON`, async () => {
       const sesion = abrirSesion({ 'main.dg': texto });
       const cacheada = await sesion.geometria(vista);
       const escrita = JSON.parse(JSON.stringify(cacheada));
-      const leida = geometriaCacheadaSchema.safeParse(escrita);
+      const leida = cachedGeometrySchema.safeParse(escrita);
 
       expect(leida.success).toBe(true);
       expect(leida.data).toEqual(escrita);

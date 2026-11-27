@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveView } from 'canonico';
-import type { VistaDeSecuencia } from 'canonico';
+import { resolveView } from 'canonical';
+import type { SequenceView } from 'canonical';
 import { abrirSesion } from 'sesion';
 
 const modelo = `specification { node servicio }
@@ -73,8 +73,8 @@ describe('seam sesion: Pasos de secuencia', () => {
     const texto = `${modelo.replace('    api -> db "consulta"', '    api -> db')}view v { type sequence\n interaction checkout\n exclude cliente\n steps each\n}\n`;
     const sesion = abrirSesion({ 'main.dg': texto });
     expect(await sesion.diagnosticar()).toEqual([]);
-    const resuelta = resolveView(sesion.fuente!, 'v') as VistaDeSecuencia;
+    const resuelta = resolveView(sesion.fuente!, 'v') as SequenceView;
     expect(resuelta.steps.map((p) => p.title)).toEqual(['api -> db', 'filas']);
-    expect(resuelta.steps.map((p) => p.corte)).toEqual(resuelta.interaction.messages.map((m) => m.ruta));
+    expect(resuelta.steps.map((p) => p.cut)).toEqual(resuelta.interaction.messages.map((m) => m.path));
   });
 });

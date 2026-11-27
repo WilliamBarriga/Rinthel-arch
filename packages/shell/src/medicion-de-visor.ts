@@ -2,7 +2,7 @@
  * Medicion de texto en el visor con la fuente real: antes de medir cada texto espera `document.fonts.load(fuente, texto)`
  * (`ready` y `check` no bastan). El `@font-face` ya debe estar en la pagina (lo declara `VistaInteractiva` desde `fontFiles`).
  */
-import { CODIGOS } from 'canonico';
+import { CODES } from 'canonical';
 import { claveDeTexto, pilaDeFuente, resolverFuentes } from 'tema';
 import type { MedidasDeTexto, TextoAMedir } from 'tema';
 
@@ -28,7 +28,7 @@ export function avisoDeFuentesSinServir(fonts: Readonly<Record<string, string>>)
   if (familias.length === 0) return [];
   return [
     {
-      code: CODIGOS.W_THEME_FONT_NOT_SERVED,
+      code: CODES.W_THEME_FONT_NOT_SERVED,
       severity: 'warning',
       file: '(visor)',
       line: 1,

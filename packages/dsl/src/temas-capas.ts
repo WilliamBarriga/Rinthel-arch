@@ -2,8 +2,8 @@
  * Bloque de parches de Capa (Tema, `type`, `state`, `part` u override de Vista): expande `use`, resuelve `$token`
  * y valida contra el catalogo y la pila vigente. La semantica de aplicar parches vive en `tema`.
  */
-import { CODIGOS } from 'canonico';
-import type { Issue, TextRange } from 'canonico';
+import { CODES } from 'canonical';
+import type { Issue, TextRange } from 'canonical';
 import { validarOps } from 'tema';
 import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, UbicacionDePrimitiva } from 'tema';
 
@@ -46,7 +46,7 @@ function expandir(items: ReadonlyArray<ThemeLayer | ThemeUse>, archivo: string, 
     if (parte === undefined) {
       ctx.issues.push(
         issueConSugerencia(
-          { code: CODIGOS.E_THEME_UNKNOWN_PART, message: `Part '${item.name}' is not declared; use 'part ${item.name} { ... }'` },
+          { code: CODES.E_THEME_UNKNOWN_PART, message: `Part '${item.name}' is not declared; use 'part ${item.name} { ... }'` },
           archivo, item, 'name', ctx.partes.keys(),
         ),
       );
@@ -79,7 +79,7 @@ function rechazarAnimacionDePagina(item: ThemeLayer, archivo: string, issues: Is
   const [anim] = item.animations;
   if (anim === undefined) return { fallo: false };
   issues.push({
-    code: CODIGOS.E_THEME_INVALID_VALUE,
+    code: CODES.E_THEME_INVALID_VALUE,
     severity: 'error',
     file: archivo,
     ...aRango(anim.$cstNode?.range).start,
@@ -101,7 +101,7 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
       return true;
     }
     ctx.issues.push({
-      code: CODIGOS.E_THEME_DUPLICATE_LAYER,
+      code: CODES.E_THEME_DUPLICATE_LAYER,
       severity: 'error',
       file: archivo,
       ...rangoDe(item, 'name').start,
@@ -123,11 +123,11 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
       donde === 'ubicacion'
         ? rangoDe(item, 'target')
         : donde === 'propiedad' && prop !== undefined
-          ? rangoDe(prop, error.codigo === CODIGOS.E_THEME_UNKNOWN_PROPERTY ? 'key' : 'value')
-          : rangoDe(item, error.codigo === CODIGOS.E_THEME_UNKNOWN_PRIMITIVE ? 'primitive' : 'name');
+          ? rangoDe(prop, error.codigo === CODES.E_THEME_UNKNOWN_PROPERTY ? 'key' : 'value')
+          : rangoDe(item, error.codigo === CODES.E_THEME_UNKNOWN_PRIMITIVE ? 'primitive' : 'name');
     const origen = baseDeError === undefined ? undefined : base.get(baseDeError);
     // Un unico candidato cercano da `fix` en vez de `hint`; los tokens (con `$`) no se arreglan.
-    const arreglable = error.candidato !== undefined && error.codigo !== CODIGOS.E_THEME_UNKNOWN_TOKEN;
+    const arreglable = error.candidato !== undefined && error.codigo !== CODES.E_THEME_UNKNOWN_TOKEN;
     return {
       code: error.codigo,
       severity: 'error',

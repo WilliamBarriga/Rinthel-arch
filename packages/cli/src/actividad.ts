@@ -4,8 +4,8 @@
  * Invariantes: un Evento por comando. Sin `--workspace` que resuelva a una carpeta no se registra.
  * Modos de error: ninguno visible; un fallo al escribir se ignora y no cambia stdout, stderr ni el codigo.
  */
-import { ACTIVIDAD_CONTRACT_VERSION, COMANDOS_CON_ACTIVIDAD } from 'canonico';
-import type { EventoDeActividad, ObjetivoDeActividad } from 'canonico';
+import { ACTIVITY_CONTRACT_VERSION, COMMANDS_WITH_ACTIVITY } from 'canonical';
+import type { ActivityEvent, ActivityTarget } from 'canonical';
 import { statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -14,7 +14,7 @@ import type { ResultadoDeEjecucion } from './sesion-cli';
 
 /** Lo que el comando nombra y, en `validate` y `build`, el recuento de issues. */
 export interface DatosDeActividad {
-  target?: ObjetivoDeActividad;
+  target?: ActivityTarget;
   summary?: { errors: number; warnings: number };
 }
 
@@ -23,8 +23,8 @@ export type ResultadoConActividad = ResultadoDeEjecucion & { actividad?: DatosDe
 
 export type Entorno = Readonly<Record<string, string | undefined>>;
 
-const registra = (comando: string | undefined): comando is EventoDeActividad['command'] =>
-  (COMANDOS_CON_ACTIVIDAD as readonly string[]).includes(comando ?? '');
+const registra = (comando: string | undefined): comando is ActivityEvent['command'] =>
+  (COMMANDS_WITH_ACTIVITY as readonly string[]).includes(comando ?? '');
 
 /** Valor de `--workspace <ruta>` o `--workspace=<ruta>`, como lo leeria `parseArgs`. */
 function workspaceDe(args: readonly string[]): string | undefined {
@@ -60,8 +60,8 @@ export async function conActividad(
   const carpeta = carpetaDe(args);
   if (carpeta === undefined) return resultado;
   const agente = entorno['DIAGRAMS_AGENT'];
-  const evento: EventoDeActividad = {
-    contractVersion: ACTIVIDAD_CONTRACT_VERSION,
+  const evento: ActivityEvent = {
+    contractVersion: ACTIVITY_CONTRACT_VERSION,
     ts: new Date(inicio).toISOString(),
     pid: process.pid,
     ...(agente !== undefined && agente !== '' && { agent: agente }),

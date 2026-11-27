@@ -8,8 +8,8 @@ import { dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { gzipSync } from 'node:zlib';
 
-import { resolveView } from 'canonico';
-import type { EstadoDeColapso, FuenteCanonica, Nodo, Tema, VistaDeSecuencia } from 'canonico';
+import { resolveView } from 'canonical';
+import type { CollapseState, CanonicalForm, Node, Theme, SequenceView } from 'canonical';
 import { run } from 'cli';
 import { compile } from 'dsl';
 import { layoutView } from 'layout';
@@ -31,7 +31,7 @@ function contarNodos(nodos: readonly { children: readonly unknown[] }[]): number
   return nodos.reduce((suma, n) => suma + 1 + contarNodos(n.children as typeof nodos), 0);
 }
 
-function compilar(nodos: number): FuenteCanonica {
+function compilar(nodos: number): CanonicalForm {
   const { canonico, issues } = compile(generarWorkspace({ nodos }));
   if (canonico === undefined) throw new Error(`El Workspace sintetico no compila: ${JSON.stringify(issues.slice(0, 3))}`);
   return canonico;
@@ -71,9 +71,9 @@ async function buildDe10k(): Promise<Record<string, number>> {
   }
 }
 
-const TEMA: Tema = TEMA_NEUTRO;
+const TEMA: Theme = TEMA_NEUTRO;
 
-async function relayout(fuente: FuenteCanonica, estado: EstadoDeColapso, adaptador: ReturnType<typeof adaptadorDeWorker>, tema: Tema = TEMA) {
+async function relayout(fuente: CanonicalForm, estado: CollapseState, adaptador: ReturnType<typeof adaptadorDeWorker>, tema: Theme = TEMA) {
   const inicio = performance.now();
   const vista = resolveView(fuente, 'todo', estado)!;
   const resolucionMs = ms(inicio);
@@ -128,7 +128,7 @@ const SLOTS_ANIDADOS = {
 /** Frente al mismo Modelo con la disposicion plana del Tema neutro. */
 async function relayoutConSlotsAnidados(nodos: number): Promise<Record<string, number>> {
   const fuente = compilar(nodos);
-  const anidado = { ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, slots: SLOTS_ANIDADOS } } as unknown as Tema;
+  const anidado = { ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, slots: SLOTS_ANIDADOS } } as unknown as Theme;
   const [pagina, worker] = parDePuertos();
   servirLayout(worker);
   const adaptador = adaptadorDeWorker(pagina);
@@ -147,16 +147,16 @@ async function relayoutConSlotsAnidados(nodos: number): Promise<Record<string, n
 
 async function colapsoDe5k(): Promise<Record<string, number>> {
   const fuente = compilar(5000);
-  const raices = fuente.model.nodes.filter((n: Nodo) => n.children.length > 0).map((n: Nodo) => n.id);
+  const raices = fuente.model.nodes.filter((n: Node) => n.children.length > 0).map((n: Node) => n.id);
   const [pagina, worker] = parDePuertos();
   servirLayout(worker);
   const adaptador = adaptadorDeWorker(pagina);
 
   // Estado inicial: todas las raices cerradas (un Modelo de 5k no se expande entero: el shell tope es ~1k).
-  const cerrado: EstadoDeColapso = { collapsed: raices };
+  const cerrado: CollapseState = { collapsed: raices };
   const inicial = await relayout(fuente, cerrado, adaptador);
   const mayor = [...fuente.model.nodes].sort((a, b) => contarNodos([b]) - contarNodos([a]))[0]!;
-  const abierto: EstadoDeColapso = { collapsed: raices.filter((id: string) => id !== mayor.id), expanded: [mayor.id] };
+  const abierto: CollapseState = { collapsed: raices.filter((id: string) => id !== mayor.id), expanded: [mayor.id] };
   const expandir = await relayout(fuente, abierto, adaptador);
   const colapsar = await relayout(fuente, cerrado, adaptador);
   return {
@@ -175,7 +175,7 @@ async function colapsoDe5k(): Promise<Record<string, number>> {
 async function secuenciaGrande(): Promise<Record<string, number>> {
   const { canonico, issues } = compile(generarSecuencia({ mensajes: 1000, lifelines: 50, profundidad: 3 }));
   if (canonico === undefined) throw new Error(`La Interaccion sintetica no compila: ${JSON.stringify(issues.slice(0, 3))}`);
-  const vista = resolveView(canonico, 'secuencia') as VistaDeSecuencia;
+  const vista = resolveView(canonico, 'secuencia') as SequenceView;
   const inicio = performance.now();
   await layoutView(vista, TEMA);
   const frioMs = ms(inicio);

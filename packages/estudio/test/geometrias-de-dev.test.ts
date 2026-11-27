@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import type { GeometriaCacheada } from 'canonico';
+import type { CachedGeometry } from 'canonical';
 
 import type { EstadoDeDev } from '../src/protocolo';
 import type { LecturaDeGeometria } from '../navegador/cliente';
 import { crearGeometriasDeDev } from '../navegador/lienzo/geometrias';
 
-const geometria = (view: string): GeometriaCacheada => ({ view, theme: 't', layoutKey: 'k', geometry: { kind: 'grafo', nodes: {}, edges: {}, labels: {}, pinsSolapados: [], width: 1, height: 1 } });
+const geometria = (view: string): CachedGeometry => ({ view, theme: 't', layoutKey: 'k', geometry: { kind: 'grafo', nodes: {}, edges: {}, labels: {}, pinsSolapados: [], width: 1, height: 1 } });
 
 /** La Fuente es opaca para la cache: solo importa que exista. */
 const estado = (version: number, cambio?: EstadoDeDev['cambio']): EstadoDeDev => ({

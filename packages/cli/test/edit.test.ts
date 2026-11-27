@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { EDIT_CONTRACT_VERSION, salidaDeEditSchema } from 'canonico';
+import { EDIT_CONTRACT_VERSION, editOutputSchema } from 'canonical';
 import { run } from 'cli';
 import { hashDeContenido } from 'sesion';
 
@@ -32,7 +32,7 @@ describe('edit pin', () => {
     const raiz = workspace();
     const r = await run(['edit', '--workspace', raiz, ...pin('general', 'a', '30', '40'), '--json']);
     expect(r.exitCode).toBe(0);
-    const salida = salidaDeEditSchema.parse(JSON.parse(r.stdout));
+    const salida = editOutputSchema.parse(JSON.parse(r.stdout));
     expect(salida).toMatchObject({ contractVersion: EDIT_CONTRACT_VERSION, ok: true, files: ['main.dg'] });
     expect(leer(raiz)).toBe(DG.replace('pin 10,20', 'pin 30,40'));
   });
@@ -48,7 +48,7 @@ describe('edit pin', () => {
     const raiz = workspace();
     const r = await run(['edit', '--workspace', raiz, ...pin('general', 'a', '1', '2'), '--hash', 'main.dg=000', '--json']);
     expect(r.exitCode).toBe(1);
-    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'stale-hash' });
+    expect(editOutputSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'stale-hash' });
     expect(leer(raiz)).toBe(DG);
   });
 
@@ -97,7 +97,7 @@ describe('edit --edits', () => {
     const raiz = workspace();
     const r = await run(['edit', '--workspace', raiz, '--edits', JSON.stringify([edicion('{{{')]), '--json']);
     expect(r.exitCode).toBe(1);
-    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'invalid' });
+    expect(editOutputSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'invalid' });
     expect(leer(raiz)).toBe(DG);
   });
 
@@ -122,7 +122,7 @@ describe('edit --edits', () => {
       const r = await run(['edit', '--workspace', raiz, '--edits', JSON.stringify(ediciones), '--json']);
 
       expect(r.exitCode, reason).toBe(1);
-      expect(salidaDeEditSchema.parse(JSON.parse(r.stdout)), reason).toMatchObject({ ok: false, reason });
+      expect(editOutputSchema.parse(JSON.parse(r.stdout)), reason).toMatchObject({ ok: false, reason });
       expect(leer(raiz)).toBe(DG);
     }
   });
@@ -150,7 +150,7 @@ view flujo {
     const raiz = workspace(SEC);
     const r = await run(['edit', '--workspace', raiz, '--intent', intent(['db', 'cliente', 'api']), '--json']);
     expect(r.exitCode).toBe(0);
-    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: true, files: ['main.dg'] });
+    expect(editOutputSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: true, files: ['main.dg'] });
     expect(leer(raiz)).toBe(SEC.replace('  interaction i\n}', '  interaction i\n  order db, cliente, api\n}'));
   });
 
@@ -165,7 +165,7 @@ view flujo {
     const raiz = workspace(SEC);
     const r = await run(['edit', '--workspace', raiz, '--intent', intent(['db']), '--hash', 'main.dg=000', '--json']);
     expect(r.exitCode).toBe(1);
-    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'stale-hash' });
+    expect(editOutputSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'stale-hash' });
     expect(leer(raiz)).toBe(SEC);
   });
 
@@ -185,7 +185,7 @@ describe('edit --intent (set-theme)', () => {
 
     const r = await run(['edit', '--workspace', raiz, '--theme-path', temas, '--intent', fijar('claro'), '--json']);
     expect(r.exitCode).toBe(0);
-    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: true, files: ['main.dg'] });
+    expect(editOutputSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: true, files: ['main.dg'] });
     expect(leer(raiz)).toBe(DG.replace('view general {\n', 'view general {\n  theme claro\n'));
 
     expect((await run(['edit', '--workspace', raiz, '--theme-path', temas, '--intent', fijar()])).exitCode).toBe(0);
@@ -196,7 +196,7 @@ describe('edit --intent (set-theme)', () => {
     const raiz = workspace();
     const r = await run(['edit', '--workspace', raiz, '--intent', fijar('neutro'), '--json']);
     expect(r.exitCode).toBe(1);
-    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'unknown-theme' });
+    expect(editOutputSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'unknown-theme' });
     expect(leer(raiz)).toBe(DG);
   });
 
@@ -256,7 +256,7 @@ describe('edit: puerta de escritura unica', () => {
       const antes = ws.vistas();
       const r = await run(['edit', '--workspace', ws.raiz, '--theme-path', ws.temas, ...args, '--json']);
       expect(r.exitCode).toBe(1);
-      expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'unknown-file', file: 'vistas.dg' });
+      expect(editOutputSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'unknown-file', file: 'vistas.dg' });
       expect(ws.vistas()).toBe(antes);
     });
   });

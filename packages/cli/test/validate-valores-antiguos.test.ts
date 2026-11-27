@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { salidaDeValidateSchema } from 'canonico';
+import { validateOutputSchema } from 'canonical';
 import { run } from 'cli';
 
 const BASE = (tema: string, vista = ''): string => `specification {
@@ -24,7 +24,7 @@ ${tema}
 
 async function validar(raiz: string) {
   const r = await run(['validate', '--workspace', raiz, '--json']);
-  return { ...r, salida: salidaDeValidateSchema.parse(JSON.parse(r.stdout)) };
+  return { ...r, salida: validateOutputSchema.parse(JSON.parse(r.stdout)) };
 }
 
 function workspace(contenido: string): string {

@@ -6,8 +6,8 @@
 import { useMemo } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
-import { resolveView } from 'canonico';
-import type { FuenteCanonica } from 'canonico';
+import { resolveView } from 'canonical';
+import type { CanonicalForm } from 'canonical';
 import type { ComponentesDeTema } from 'render';
 import { Leyenda, VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, PropsDeEstadoEnHash } from 'shell';
@@ -79,7 +79,7 @@ export function useLienzoDelEstudio({ dibujable, hashProps: props, layout, compo
   return { lienzo, leyenda: <LeyendaDeVista fuente={fuente} props={props} tema={tema} /> };
 }
 
-function LeyendaDeVista({ fuente, props, tema }: { fuente: FuenteCanonica; props: PropsDeEstadoEnHash; tema: Parameters<typeof Leyenda>[0]['tema'] }): ReactElement | null {
+function LeyendaDeVista({ fuente, props, tema }: { fuente: CanonicalForm; props: PropsDeEstadoEnHash; tema: Parameters<typeof Leyenda>[0]['tema'] }): ReactElement | null {
   const vista = useMemo(() => resolveView(fuente, props.view, props.state), [fuente, props.view, props.state]);
   if (vista === undefined) return null;
   return (

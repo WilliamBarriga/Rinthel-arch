@@ -1,5 +1,5 @@
 /** Arbol de Slots del Tema y su validacion. El orden de los hijos es el visual; un Slot fuera del arbol no se pinta ni se mide. */
-import { CODIGOS } from 'canonico';
+import { CODES } from 'canonical';
 
 import { SLOTS, esSlot, sugerir, validarPropiedades } from './catalogo';
 import type { DefinicionDePropiedad, ErrorDeCatalogo, NombreDeSlot } from './catalogo';
@@ -140,7 +140,7 @@ export function construirDisposicion<R>(entrada: EntradaDeCaja<R>, elemento: 'no
     escritas.some((p) => p.clave === 'align') ? (props['align'] as Alineacion | undefined) : undefined;
   const caja = (c: EntradaDeCaja<R>): CajaDeSlots => {
     if (!(DIRECCIONES as readonly string[]).includes(c.direccion)) {
-      errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `Unknown direction '${c.direccion}'; use ${DIRECCIONES.join(' or ')}`, ref: c.ref, ...sugerir(c.direccion, DIRECCIONES) });
+      errores.push({ codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `Unknown direction '${c.direccion}'; use ${DIRECCIONES.join(' or ')}`, ref: c.ref, ...sugerir(c.direccion, DIRECCIONES) });
     }
     const props = propiedades('The box', `'${c.direccion}'`, PROPIEDADES_DE_CAJA, c.props, c.ref);
     const hijos: ElementoDeSlots[] = [];
@@ -148,11 +148,11 @@ export function construirDisposicion<R>(entrada: EntradaDeCaja<R>, elemento: 'no
       if (!('slot' in h)) {
         hijos.push(caja(h));
       } else if (!esSlot(h.slot)) {
-        errores.push({ codigo: CODIGOS.E_THEME_UNKNOWN_SLOT, mensaje: `Unknown Slot '${h.slot}'; available: ${SLOTS.join(', ')}`, ref: h.ref, ...sugerir(h.slot, SLOTS) });
+        errores.push({ codigo: CODES.E_THEME_UNKNOWN_SLOT, mensaje: `Unknown Slot '${h.slot}'; available: ${SLOTS.join(', ')}`, ref: h.ref, ...sugerir(h.slot, SLOTS) });
       } else if (elemento === 'grupo' && SLOTS_SOLO_DE_NODO.includes(h.slot)) {
-        errores.push({ codigo: CODIGOS.E_THEME_UNKNOWN_SLOT, mensaje: `Slot '${h.slot}' is not valid in a Group: only in a leaf Node`, ref: h.ref });
+        errores.push({ codigo: CODES.E_THEME_UNKNOWN_SLOT, mensaje: `Slot '${h.slot}' is not valid in a Group: only in a leaf Node`, ref: h.ref });
       } else if (vistos.has(h.slot)) {
-        errores.push({ codigo: CODIGOS.E_THEME_UNKNOWN_SLOT, mensaje: `Duplicate Slot '${h.slot}'`, ref: h.ref });
+        errores.push({ codigo: CODES.E_THEME_UNKNOWN_SLOT, mensaje: `Duplicate Slot '${h.slot}'`, ref: h.ref });
       } else {
         vistos.add(h.slot);
         const escritas = h.align === undefined ? [] : [h.align];

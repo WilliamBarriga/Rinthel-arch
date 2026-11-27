@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
-import type { Geometria, Tema, VistaResuelta } from 'canonico';
+import { canonicalFormSchema } from 'canonical';
+import type { Geometry, Theme, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 const nodo = (id: string, type: string) => ({ id, type, title: id.toUpperCase(), description: '', children: [] });
-const fuente = fuenteCanonicaSchema.parse({
+const fuente = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'servicio', color: 'a' }, { name: 'base', color: 'b' }] },
   model: { nodes: [nodo('x', 'servicio'), nodo('y', 'base')], edges: [] },
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
@@ -22,9 +22,9 @@ const fuente = fuenteCanonicaSchema.parse({
 
 function layoutContador() {
   const temas: string[] = [];
-  const layout: AdaptadorDeLayout = async (vista: VistaResuelta, tema: Tema) => {
+  const layout: AdaptadorDeLayout = async (vista: ResolvedView, tema: Theme) => {
     temas.push(tema.name);
-    const nodes: Geometria['nodes'] = {};
+    const nodes: Geometry['nodes'] = {};
     vista.nodes.forEach((n, i) => {
       nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
     });
@@ -114,7 +114,7 @@ describe('leyenda por Tipo de diagrama de la Vista', () => {
   it('una insignia que el Tema solo pone en diagram flow distingue los Tipos en la Vista de flujo, no en la de arquitectura', async () => {
     const conInsignia = { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'badge' }] };
     const tema = conColor({ nodo: { ...TEMA_NEUTRO.nodo, capas: [capaRelleno], diagramas: { flow: { ops: [], slots: conInsignia } } } as TemaResuelto['nodo'] });
-    const conFlujo = fuenteCanonicaSchema.parse({ ...fuente, views: [...fuente.views, { id: 'f', type: 'flow', include: ['**'], exclude: [] }] });
+    const conFlujo = canonicalFormSchema.parse({ ...fuente, views: [...fuente.views, { id: 'f', type: 'flow', include: ['**'], exclude: [] }] });
     const { layout } = layoutContador();
     const montarVista = (view: string) => render(<VistaInteractiva source={conFlujo} view={view} theme={tema} layout={layout} width={800} height={600} />);
 

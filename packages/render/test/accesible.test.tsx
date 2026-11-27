@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView } from 'canonico';
+import { canonicalFormSchema, resolveView } from 'canonical';
 import { layoutView } from 'layout';
 import { Diagram } from 'render';
 import type { DiagramProps } from 'render';
@@ -11,7 +11,7 @@ import type { TemaResuelto } from 'tema';
 const nodo = (id: string, type: string, title: string, children: unknown[] = []) => ({ id, type, title, description: '', children });
 
 async function props(theme: TemaResuelto): Promise<DiagramProps> {
-  const fuente = fuenteCanonicaSchema.parse({
+  const fuente = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }, { name: 'base' }] },
     model: {
       nodes: [nodo('api', 'servicio', 'API de pagos'), nodo('db', 'base', 'Base de pagos'), nodo('g', 'servicio', 'Grupo', [nodo('g.x', 'servicio', 'X')])],

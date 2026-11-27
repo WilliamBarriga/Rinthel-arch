@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
+import { combineIconProviders, canonicalFormSchema, genericIcons, resolveView, workspaceIcons } from 'canonical';
 import { layoutView } from 'layout';
 import { aHtml, etiquetaCon } from './ayudas';
 import type { DiagramProps } from 'render';
@@ -9,7 +9,7 @@ import { TEMA_NEUTRO } from 'tema';
 type Detalle = NonNullable<DiagramProps['detail']>;
 
 async function dibujar(detail?: Detalle): Promise<string> {
-  const fuente = fuenteCanonicaSchema.parse({
+  const fuente = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'tabla', icon: 'database' }] },
     model: {
       nodes: [{ id: 'usuarios', type: 'tabla', title: 'Usuarios del sistema', description: '', children: [], attributes: [{ name: 'id', type: 'uuid' }] }],

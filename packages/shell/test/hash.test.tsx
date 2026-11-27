@@ -1,8 +1,8 @@
 import { act, cleanup, render, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
-import type { Geometria, VistaResuelta } from 'canonico';
+import { canonicalFormSchema } from 'canonical';
+import type { Geometry, ResolvedView } from 'canonical';
 import { VistaInteractiva, deserializarEstado, hashDelNavegador, serializarEstado, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeHash, AdaptadorDeLayout, EstadoDeShell } from 'shell';
 import { pulsarNodo } from './ayudas';
@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 const nodo = (id: string, children: unknown[] = []) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children });
-const fuente = fuenteCanonicaSchema.parse({
+const fuente = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'servicio' }] },
   model: { nodes: [nodo('g', [nodo('g.h'), nodo('g.i')]), nodo('x'), nodo('y')], edges: [] },
   views: [
@@ -49,7 +49,7 @@ describe('serializarEstado y deserializarEstado', () => {
   });
 
   it('ids con caracteres especiales sobreviven', () => {
-    const f = fuenteCanonicaSchema.parse({
+    const f = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
       model: { nodes: [nodo('a_b-1')], edges: [] },
       views: [{ id: 'v 1,2&=%', type: 'flow', include: ['**'], exclude: [] }],
@@ -86,7 +86,7 @@ describe('serializarEstado y deserializarEstado', () => {
   });
 
   it('una Vista de secuencia con Pasos entra en el primero; arquitectura conserva el 0', () => {
-    const secuencia = fuenteCanonicaSchema.parse({
+    const secuencia = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
       model: { nodes: [nodo('x'), nodo('y')], edges: [], interactions: [{ id: 'i', title: 'i', items: [{ type: 'message', kind: 'sync', from: 'x', to: 'y' }] }] },
       views: [{ id: 's', type: 'sequence', include: ['**'], exclude: [], interaction: 'i', steps: [{ title: 'uno', show: [] }] }],
@@ -99,7 +99,7 @@ describe('serializarEstado y deserializarEstado', () => {
   });
 
   it('una Vista ER con Pasos entra en el primero: el Paso 0 la dejaria vacia', () => {
-    const er = fuenteCanonicaSchema.parse({
+    const er = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
       model: { nodes: [nodo('x'), nodo('y')], edges: [] },
       views: [{ id: 'e', type: 'er', include: ['**'], exclude: [], steps: [{ title: 'uno', show: [{ selector: 'x' }] }] }],
@@ -208,8 +208,8 @@ describe('useEstadoEnHash', () => {
 });
 
 describe('integracion con VistaInteractiva y location.hash', () => {
-  const layout: AdaptadorDeLayout = async (vista: VistaResuelta) => {
-    const nodes: Geometria['nodes'] = {};
+  const layout: AdaptadorDeLayout = async (vista: ResolvedView) => {
+    const nodes: Geometry['nodes'] = {};
     vista.nodes.forEach((n, i) => {
       nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
     });

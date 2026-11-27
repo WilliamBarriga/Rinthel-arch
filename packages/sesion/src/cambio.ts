@@ -5,12 +5,12 @@
  * - `codigo`: cambia un `.tsx` y nada mas fuerte.
  * - `pintura`: lo demas; el Estilo se reaplica sin relayout.
  */
-import type { FuenteCanonica, TipoDeCambio } from 'canonico';
+import type { CanonicalForm, ChangeKind } from 'canonical';
 import { TEMA_NEUTRO, claveDeMetricas, tablaDeMetricas } from 'tema';
 
 /** `recursos`: hash de cada `.tsx` y fuente. */
 export interface InstanteDeDev {
-  fuente: FuenteCanonica | undefined;
+  fuente: CanonicalForm | undefined;
   recursos: Readonly<Record<string, string>>;
 }
 
@@ -20,7 +20,7 @@ const cambiaron = (a: Readonly<Record<string, string>>, b: Readonly<Record<strin
   [...new Set([...Object.keys(a), ...Object.keys(b)])].some((ruta) => quiere(ruta) && a[ruta] !== b[ruta]);
 
 /** Todo salvo los Temas, y por Vista las Metricas de su Tema. */
-function claveDeEstructura(fuente: FuenteCanonica): string {
+function claveDeEstructura(fuente: CanonicalForm): string {
   const temaDe = (nombre: string | undefined) => fuente.themes.find((t) => t.name === (nombre ?? TEMA_NEUTRO.name)) ?? TEMA_NEUTRO;
   return JSON.stringify({
     specification: fuente.specification,
@@ -29,7 +29,7 @@ function claveDeEstructura(fuente: FuenteCanonica): string {
   });
 }
 
-export function clasificarCambio(antes: InstanteDeDev, despues: InstanteDeDev & { fuente: FuenteCanonica }): TipoDeCambio {
+export function clasificarCambio(antes: InstanteDeDev, despues: InstanteDeDev & { fuente: CanonicalForm }): ChangeKind {
   if (antes.fuente === undefined) return 'estructura';
   if (claveDeEstructura(antes.fuente) !== claveDeEstructura(despues.fuente)) return 'estructura';
   if (cambiaron(antes.recursos, despues.recursos, (ruta) => !ruta.endsWith(EXTENSION_DE_CODIGO))) return 'estructura';

@@ -8,12 +8,12 @@ Compiler from the Text DSL (Langium grammar) to the Canonical form.
 - Declares in DSL the built-in Themes `neutral` and `neutral-dark` (`src/incorporados.ts`, zero contrast warnings); `high-contrast` belongs to `tema`. The grammar is `src/gramatica/diagramas.langium`; `src/generated/` comes from `pnpm generate` (run by `build`), it is neither versioned nor edited.
 
 ## What it does not do
-- Does not define nor validate the schema of the Canonical form: that is `canonico`.
+- Does not define nor validate the schema of the Canonical form: that is `canonical`.
 - Does not define the catalog of Primitives, Slots and Effects nor compute geometry: that is `tema` and `layout`.
 - Does not read disk: it receives `ArchivosDelWorkspace` already read.
 
 ## Depends on
-`canonico` and `tema` (`docs/CODING.md`, "Dependency direction"). External dependency: `langium`.
+`canonical` and `tema` (`docs/CODING.md`, "Dependency direction"). External dependency: `langium`.
 
 ## Entry file
 `packages/dsl/src/index.ts` (the header documents invariants and error modes).

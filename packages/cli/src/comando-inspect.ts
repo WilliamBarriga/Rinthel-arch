@@ -1,12 +1,12 @@
 /**
- * Comando `inspect`, solo lectura. Con `--json`, un objeto `salidaDeInspectSchema`.
+ * Comando `inspect`, solo lectura. Con `--json`, un objeto `inspectOutputSchema`.
  * Codigos: 0 respuesta, 1 no existe o el Workspace tiene errores (mensaje en stderr, stdout vacio), 2 fallo de uso o interno.
  */
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
 
-import { COMANDOS_DE_INSPECT } from 'canonico';
-import type { ComandoDeInspect } from 'canonico';
+import { INSPECT_COMMANDS } from 'canonical';
+import type { InspectCommand } from 'canonical';
 
 import { comoJson, consultarInspect, textoLegible } from './inspect';
 import { abrirSesionDe, textoDeIssues, uso as usoComun } from './sesion-cli';
@@ -41,7 +41,7 @@ export async function inspeccionar(
   }
   const [comando, argumento, ...sobrantes] = parseado.positionals;
   const uso = 'Usage: diagrams inspect <search|node|view|interaction|planned|theme> [argument] --workspace <path> [--theme-path <folder>] [--json] (theme accepts --kind <kind> --state <state> --diagram <type> --catalog)';
-  if (comando === undefined || !(COMANDOS_DE_INSPECT as readonly string[]).includes(comando)) return fallo(2, `Unknown or missing inspect subcommand. ${uso}`);
+  if (comando === undefined || !(INSPECT_COMMANDS as readonly string[]).includes(comando)) return fallo(2, `Unknown or missing inspect subcommand. ${uso}`);
   if (comando === 'planned' ? argumento !== undefined : argumento === undefined || sobrantes.length > 0) return fallo(2, `inspect ${comando} requires ${comando === 'planned' ? 'no argument' : 'exactly one argument'}. ${uso}`);
   const { kind: tipo, state: estado, diagram: diagrama, catalog: catalogo } = parseado.values;
   if (comando !== 'theme' && (tipo !== undefined || estado !== undefined || diagrama !== undefined || catalogo === true)) return fallo(2, `--kind, --state, --diagram and --catalog only apply to 'inspect theme'. ${uso}`);
@@ -69,7 +69,7 @@ async function consultar(
   if (sesion.fuente === undefined) {
     return fallo(1, `The Workspace has errors; fix them with 'validate' before querying.\n${(await textoDeIssues(sesion)).trimEnd()}`);
   }
-  const respuesta = consultarInspect(sesion, { comando: comando as ComandoDeInspect, argumento: argumento ?? '', catalogo: catalogo === true, ...(tipo !== undefined && { tipo }), ...(estado !== undefined && { estado }), ...(diagrama !== undefined && { diagrama }) });
+  const respuesta = consultarInspect(sesion, { comando: comando as InspectCommand, argumento: argumento ?? '', catalogo: catalogo === true, ...(tipo !== undefined && { tipo }), ...(estado !== undefined && { estado }), ...(diagrama !== undefined && { diagrama }) });
   if (respuesta === undefined) return fallo(1, 'The Workspace has errors; fix them with \'validate\' before querying.');
   if ('noEncontrado' in respuesta) return fallo(1, respuesta.noEncontrado);
   return { exitCode: 0, stdout: json ? comoJson(respuesta.salida) : textoLegible(respuesta.salida), stderr: '' };

@@ -1,6 +1,6 @@
 /** `inspect theme`: la consulta de un Tema (cadena `extends`, Capas, Grupo, Elementos, Slots y Metricas). Pura. */
-import { INSPECT_CONTRACT_VERSION, candidatosCercanos } from 'canonico';
-import type { FuenteCanonica } from 'canonico';
+import { INSPECT_CONTRACT_VERSION, nearestCandidates } from 'canonical';
+import type { CanonicalForm } from 'canonical';
 import type { OrigenDeTema } from 'dsl';
 import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, TIPOS_DE_DIAGRAMA, alturaDeCabecera, cascada, componentesDeTema, describirDisposicion, elementosDeTema, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas, temaParaDiagrama } from 'tema';
 import type { CapaDeTema, CapaDescrita } from 'tema';
@@ -20,15 +20,15 @@ export interface OpcionesDeConsultaDeTema {
 const INCORPORADO: Sitio = { file: '(incorporado)', line: 1 };
 
 /** Cadena `extends`, `part` usadas, pila de Capas para un Tipo y estado (con el sitio que fijo cada Capa), Metricas y uso de codigo. */
-export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<string, OrigenDeTema>>, nombre: string, { tipo, estado, diagrama, catalogo = false }: OpcionesDeConsultaDeTema = {}): Respuesta {
+export function consultarTema(fuente: CanonicalForm, origenes: Readonly<Record<string, OrigenDeTema>>, nombre: string, { tipo, estado, diagrama, catalogo = false }: OpcionesDeConsultaDeTema = {}): Respuesta {
   const declarado = fuente.themes.find((t) => t.name === nombre);
   if (declarado === undefined) {
-    const cerca = candidatosCercanos(nombre, fuente.themes.map((t) => t.name));
+    const cerca = nearestCandidates(nombre, fuente.themes.map((t) => t.name));
     return { noEncontrado: `No such Theme '${nombre}'${cerca.length === 0 ? '' : `. Did you mean: ${cerca.join(', ')}`}`, suggestions: cerca };
   }
   const tipos = fuente.specification.nodeTypes.map((t) => t.name);
   if (tipo !== undefined && !tipos.includes(tipo)) {
-    const cerca = candidatosCercanos(tipo, tipos);
+    const cerca = nearestCandidates(tipo, tipos);
     return { noEncontrado: `No such Node kind '${tipo}'${cerca.length === 0 ? '' : `. Did you mean: ${cerca.join(', ')}`}`, suggestions: cerca };
   }
   const parseado = estado === undefined ? undefined : parsearEstado(estado);
@@ -38,7 +38,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
   }
   const tipoDeDiagrama = diagrama === undefined ? undefined : TIPOS_DE_DIAGRAMA.find((t) => t === diagrama);
   if (diagrama !== undefined && tipoDeDiagrama === undefined) {
-    const cerca = candidatosCercanos(diagrama, TIPOS_DE_DIAGRAMA);
+    const cerca = nearestCandidates(diagrama, TIPOS_DE_DIAGRAMA);
     return { noEncontrado: `No such Diagram type '${diagrama}'${cerca.length === 0 ? '' : `. Did you mean: ${cerca.join(', ')}`}. Types: ${TIPOS_DE_DIAGRAMA.join(', ')}`, suggestions: cerca };
   }
   const estadoValido = parseado === undefined || 'error' in parseado ? undefined : parseado.estado;

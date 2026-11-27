@@ -1,8 +1,8 @@
 /**
- * Reordenar Lifelines por arrastre, puro sobre la `GeometriaSecuencia`. Una unidad (Lifeline o bloque de un `box`) solo
+ * Reordenar Lifelines por arrastre, puro sobre la `SequenceGeometry`. Una unidad (Lifeline o bloque de un `box`) solo
  * se mueve entre sus hermanas dentro del `box` que la contiene, y la Lifeline propia de ese Grupo se queda primera.
  */
-import type { CajaDeGrupo, GeometriaSecuencia } from 'canonico';
+import type { GroupBox, SequenceGeometry } from 'canonical';
 
 import { contiene } from './caja';
 
@@ -13,7 +13,7 @@ export interface UnidadArrastrada {
 }
 
 /** Que se agarra en `punto`: la cabecera de una Lifeline o el titulo de un `box`; nada si no cae en ninguno. */
-export function unidadBajo(g: GeometriaSecuencia, grupos: readonly CajaDeGrupo[], punto: { x: number; y: number }): UnidadArrastrada | undefined {
+export function unidadBajo(g: SequenceGeometry, grupos: readonly GroupBox[], punto: { x: number; y: number }): UnidadArrastrada | undefined {
   for (const [id, caja] of Object.entries(g.nodes)) {
     if (contiene(caja, punto)) return { id, bloque: grupos.some((grupo) => grupo.id === id) };
   }
@@ -22,21 +22,21 @@ export function unidadBajo(g: GeometriaSecuencia, grupos: readonly CajaDeGrupo[]
 }
 
 /** Orden visible (ids de izquierda a derecha) tras soltar `unidad` desplazada `dx`; el mismo `orden` si no cambia de sitio. */
-export function ordenTrasArrastrar(g: GeometriaSecuencia, grupos: readonly CajaDeGrupo[], orden: readonly string[], unidad: UnidadArrastrada, dx: number): string[] {
+export function ordenTrasArrastrar(g: SequenceGeometry, grupos: readonly GroupBox[], orden: readonly string[], unidad: UnidadArrastrada, dx: number): string[] {
   const miembros = unidad.bloque ? (grupos.find((grupo) => grupo.id === unidad.id)?.lifelines ?? [unidad.id]) : [unidad.id];
   // Caja contenedora: el `box` mas interno que abarca la unidad sin ser ella misma.
-  const contenedor: CajaDeGrupo | undefined = grupos
+  const contenedor: GroupBox | undefined = grupos
     .filter((grupo) => !(unidad.bloque && grupo.id === unidad.id) && miembros.every((m) => grupo.lifelines.includes(m)))
-    .sort((a, b) => b.nivel - a.nivel)[0];
+    .sort((a, b) => b.level - a.level)[0];
   const lista = contenedor?.lifelines ?? orden;
   const inicio = orden.indexOf(lista[0]!);
   const fija = contenedor !== undefined && lista[0] === contenedor.id ? [contenedor.id] : [];
   const movibles = lista.slice(fija.length);
 
   // Unidades hermanas: cada Lifeline suelta, o cada `box` hijo entero.
-  const nivelHijo = contenedor === undefined ? 0 : contenedor.nivel + 1;
+  const nivelHijo = contenedor === undefined ? 0 : contenedor.level + 1;
   const clave = (id: string): string =>
-    grupos.filter((grupo) => grupo.nivel >= nivelHijo && grupo.lifelines.includes(id)).sort((a, b) => a.nivel - b.nivel)[0]?.id ?? id;
+    grupos.filter((grupo) => grupo.level >= nivelHijo && grupo.lifelines.includes(id)).sort((a, b) => a.level - b.level)[0]?.id ?? id;
   const unidades: string[][] = [];
   for (const id of movibles) {
     const ultima = unidades.at(-1);

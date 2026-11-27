@@ -59,7 +59,7 @@ describe('cliente unico de la pagina de dev', () => {
     ]);
   });
 
-  it('pide la Geometria de una Vista y la valida con el esquema de canonico', async () => {
+  it('pide la Geometria de una Vista y la valida con el esquema de canonical', async () => {
     const s = servidor({ '/api/vista/v%201': { cuerpo: buena }, '/api/vista/rota': { cuerpo: { ...buena, geometry: { kind: 'grafo', nodes: 3 } } } });
     const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
 

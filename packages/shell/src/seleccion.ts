@@ -1,7 +1,7 @@
 /** Seleccion de elementos: controlada por ids (`selected`, `selection`) o propia. */
 import { useMemo, useState } from 'react';
 
-import type { VistaResuelta } from 'canonico';
+import type { ResolvedView } from 'canonical';
 import type { EstadoVisual, Estados } from 'render';
 
 import { SELECCION_VACIA, elementoPorId, seleccionar } from './interaccion';
@@ -23,7 +23,7 @@ export function conEstadosTransitorios(base: Estados, hover: string | undefined,
 }
 
 export function useSeleccion(
-  vista: VistaResuelta,
+  vista: ResolvedView,
   selected: string | null | undefined,
   selection?: readonly string[],
 ): ResultadoDeSeleccion & { seleccion: Seleccion } {

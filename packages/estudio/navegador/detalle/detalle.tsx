@@ -1,14 +1,14 @@
 /** Panel Detalle: el Nodo seleccionado tal como lo da `inspect node` (`GET /api/inspect/node/<id>`), releido en cada version. */
 import type { ReactElement } from 'react';
 
-import type { SalidaDeInspect } from 'canonico';
+import type { InspectOutput } from 'canonical';
 
 import { AvisoDeLectura } from '../marco/aviso-de-lectura';
 import { useEstudio } from '../marco/contexto';
 import { useInspectPorVersion } from '../marco/use-lectura-por-version';
 import { textoDeSitio } from '../sitio';
 
-type SalidaDeNodo = Extract<SalidaDeInspect, { command: 'node' }>;
+type SalidaDeNodo = Extract<InspectOutput, { command: 'node' }>;
 
 export function Detalle(): ReactElement {
   const { seleccion, cliente, estado, irAVista } = useEstudio();

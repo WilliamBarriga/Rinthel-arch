@@ -1,22 +1,22 @@
 /** Indice de geometria absoluta: caja de cada Nodo en el lienzo, su padre y las raices. Puro. */
-import type { CajaDeNodo, NodoResuelto, VistaResuelta } from 'canonico';
+import type { NodeBox, ResolvedNode, ResolvedView } from 'canonical';
 
 
 export interface IndiceDeGeometria {
   /** Caja de cada Nodo con caja en la geometria, en coordenadas del lienzo. */
-  cajas: Map<string, CajaDeNodo>;
+  cajas: Map<string, NodeBox>;
   /** Las raices no estan. */
   padre: Map<string, string>;
   /** Los Nodos que ningun Grupo de la Vista anida. */
-  raices: NodoResuelto[];
+  raices: ResolvedNode[];
 }
 
 /** Un Nodo sin caja se omite junto con su subarbol; un Grupo colapsado es una hoja. */
-export function indiceDeGeometria(vista: VistaResuelta, geometria: { nodes: Readonly<Record<string, CajaDeNodo>> }): IndiceDeGeometria {
+export function indiceDeGeometria(vista: ResolvedView, geometria: { nodes: Readonly<Record<string, NodeBox>> }): IndiceDeGeometria {
   const padre = new Map(vista.nodes.flatMap((nodo) => nodo.children.map((hijo) => [hijo.id, nodo.id] as const)));
   const raices = vista.nodes.filter((nodo) => !padre.has(nodo.id));
-  const cajas = new Map<string, CajaDeNodo>();
-  const visitar = (nodo: NodoResuelto, dx: number, dy: number): void => {
+  const cajas = new Map<string, NodeBox>();
+  const visitar = (nodo: ResolvedNode, dx: number, dy: number): void => {
     const caja = geometria.nodes[nodo.id];
     if (caja === undefined) return;
     const absoluta = { ...caja, x: caja.x + dx, y: caja.y + dy };
